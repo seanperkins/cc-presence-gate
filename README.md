@@ -27,18 +27,24 @@ issue `done`-stamps) into a reusable, self-contained tool with no server depende
 
 ## What it guarantees — stated honestly
 
-A **recognized** gated action cannot proceed without a physical touch on an enrolled
-**hardware** key. The agent cannot disable the gate (it is registered via Claude Code
-*managed settings* and its policy files are root-owned) and cannot forge the touch.
+A **recognized** gated action cannot proceed **synchronously** without a valid hardware
+signature from an enrolled key — *provided* Claude Code denies a tool call whose hook times
+out or errors, and the enrolled key genuinely requires a touch. The agent cannot disable the
+gate (managed settings + root-owned, agent-read-only policy + a scrubbed exec environment)
+and cannot forge the touch.
 
-It does **not** guarantee that every dangerous action is *recognized* — matching an
-arbitrary shell command against a danger-list is inherently incomplete. And it does not
-defend against the host's `root` user (that's you). See [docs/design.md](docs/design.md)
-for the full threat model.
+It does **not** guarantee that every dangerous action is *recognized* — arbitrary shell-string
+gating is undecidable, so the Bash danger-list is *advisory*; the non-launderable guarantee is
+for structured tools (MCP name-matches and Write/Edit path-writes via a default-deny tier). It
+does not cover **deferred/detached** execution (a `launchd`/`cron`/git-hook job runs outside the
+hook), and it does not defend against the host's `root` user (that's you). See
+[docs/design.md](docs/design.md) for the full threat model — including the four platform
+questions (Task 0) that must resolve favorably before this is buildable at all.
 
 ## Status
 
-🚧 Design complete, implementation not started. See [docs/design.md](docs/design.md).
+🚧 Design revised after a five-model review (round 1, unanimous REVISE — all findings folded
+in). Implementation is gated on the **Task 0 feasibility spike**. See [docs/design.md](docs/design.md).
 
 ## Requirements
 
