@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Bind a unix socket, accept one connection, read the peer uid via LOCAL_PEERCRED.
 import socket, struct, sys, os
-PATH = "/var/ccfido/gate.sock"
+PATH = "/var/ccfido-run/gate.sock"  # dir is 0755 _ccfido-owned so sean can traverse to the socket
 LOCAL_PEERCRED = 0x001  # macOS SO_PEERCRED equivalent option (xucred)
 try:
     os.unlink(PATH)
