@@ -59,3 +59,34 @@ PASS: handle not readable by sean
 
 The signing handle is owned by `_ccfido` at `0600`, so the agent uid can't read it and therefore
 **can't even arm the enrolled key** — the precondition for "only the broker ever signs".
+
+## Q1/Q2/Q3-owner — non-console daemon signing (LOAD-BEARING) — ⛔️ RED (as specified) / architecture revision
+
+`run-q1.sh` + `brokerd-probe.sh`. The daemon ran as `_ccfido` (uid 309) under launchd's **system
+domain** and:
+
+```
+=== (3-owner) uchg toggle on an owned file ===
+set uchg OK
+write-while-uchg denied OK
+clear uchg OK (owner, no root)          <-- Q3-owner ✅
+=== (1) sign against USB key — TOUCH EXPECTED ===
+Confirm user presence for key ED25519-SK SHA256:bmx2…
+Couldn't sign message: device not found
+Signing (stdin) failed: device not found
+VERDICT: RED daemon could NOT sign (device not found)
+```
+
+**Disambiguation (device vs session).** To rule out the transient stuck-helper seen in 0.4, the
+same sign was run as **root in the console session** after clearing helpers — it **signed OK (rc=0,
+with touch)**. Combined with 0.4 (`sean`-console signs), this localizes the failure precisely:
+
+> **A LaunchDaemon in the system domain cannot reach the USB FIDO device.** USB HID / `ssh-sk-helper`
+> access requires the **console/login session**. The device is healthy; the daemon's session context
+> is the blocker.
+
+**Consequence (Q3-owner ✅, Q1 as-specified ⛔️).** The privileged half of the broker works as a
+daemon (owns files, toggles `uchg`, will verify + write). Only the **arming/signing** step can't
+live in the daemon. `ssh-keygen -Y verify` needs **no USB**, so the fix is a split (see "Architecture
+revision" below), not a dead end — the hard guarantee survives. This is a NO-GO for the
+*daemon-signs* design and a go-back-to-spec, exactly as the plan anticipated.
