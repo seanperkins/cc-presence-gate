@@ -87,6 +87,47 @@ with touch)**. Combined with 0.4 (`sean`-console signs), this localizes the fail
 
 **Consequence (Q3-owner ✅, Q1 as-specified ⛔️).** The privileged half of the broker works as a
 daemon (owns files, toggles `uchg`, will verify + write). Only the **arming/signing** step can't
-live in the daemon. `ssh-keygen -Y verify` needs **no USB**, so the fix is a split (see "Architecture
-revision" below), not a dead end — the hard guarantee survives. This is a NO-GO for the
-*daemon-signs* design and a go-back-to-spec, exactly as the plan anticipated.
+live in the daemon. `ssh-keygen -Y verify` needs **no USB**, so the fix is a split, not a dead end
+— the hard guarantee survives.
+
+**Architecture revision adopted (capability-split):** the console-session **client** does USB + GUI
+(arm, sign the daemon's challenge, dialog); the **daemon** issues the challenge, **verifies** the
+signature (USB-free), owns files, toggles `uchg` + writes, and audits. Q2 (cross-process touch
+binding) is thereby **subsumed** — signing is entirely client-side. The spec's Section 1 was updated
+accordingly (commit on `main`). The revision's pieces are each independently proven: client-signs
+(0.4 `sean`-console + root-console here), verify-USB-free (0.4 crypto), owner `uchg`-toggle + write
+(this task). Trade accepted: the handle is readable by the console signer → agent can *arm* (not
+sign); single-armed-signer drops to a parked hardening upgrade. See spec §"Consequence of no-root".
+
+## Q4 — unix socket + `LOCAL_PEERCRED` — ✅ GREEN
+
+`run-q4.sh` + `peercred_server.py`:
+
+```
+listening on /var/ccfido-run/gate.sock as uid=309
+sean connected OK
+PEER uid=501
+```
+
+`sean` reaches a `_ccfido`-owned socket and the server reads the caller uid via `LOCAL_PEERCRED`
+(for audit; authorization stays touch-based). **Design note:** the socket must live in a traversable
+`0755` dir — *not* the `0700` keydir `/var/ccfido` (first attempt failed `EPERM` because the keydir
+is deliberately unreachable).
+
+---
+
+## Scoreboard
+
+| Q | Question | Verdict |
+|---|----------|---------|
+| Q1 | daemon (system domain) reaches USB to sign | ⛔️ **RED as specified** → ✅ **resolved by capability-split** (client signs, daemon verifies) |
+| Q2 | cross-process touch binding | ✅ **subsumed** (signing is entirely client-side now) |
+| Q3 | `uchg` file+dir lock (agent out) + owner toggle | ✅ **GREEN** (Task 1 + daemon owner-toggle) |
+| Q4 | socket reachability + `LOCAL_PEERCRED` | ✅ **GREEN** |
+
+**GO / NO-GO: GO — for the revised capability-split architecture.** The load-bearing kernel lock
+(Q3) holds; the daemon-can't-sign fact (Q1) is fully accommodated by moving signing to the console
+client with the daemon verifying (all sub-pieces proven), and the socket transport (Q4) works. The
+*daemon-signs* design is abandoned. Implementation may proceed against the revised Section 1; the
+first implementation task should be an end-to-end integration of the split ceremony
+(client-sign → socket → daemon-verify → `uchg`-write), which composes only already-proven pieces.
