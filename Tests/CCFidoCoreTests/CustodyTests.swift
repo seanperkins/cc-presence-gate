@@ -26,4 +26,11 @@ final class CustodyTests: XCTestCase {
         let (files, dirs) = CustodyRegistry.load(path: p)
         XCTAssertEqual(files, ["/a/b"]); XCTAssertEqual(dirs, ["/c"])
     }
+    func testRegistryDedupsAcrossFirmlinkAndRepeat() throws {
+        let p = NSTemporaryDirectory() + "custody-\(UUID().uuidString).json"
+        try CustodyRegistry.add(file: "/var/foo", dir: nil, path: p)
+        try CustodyRegistry.add(file: "/private/var/foo", dir: nil, path: p)  // firmlink form of the same file
+        try CustodyRegistry.add(file: "/var/foo", dir: nil, path: p)          // exact repeat
+        XCTAssertEqual(CustodyRegistry.load(path: p).files, ["/var/foo"])     // one entry, normalized
+    }
 }
