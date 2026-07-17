@@ -23,4 +23,46 @@ final class PolicyTests: XCTestCase {
     func testInvalidRegexInPolicyThrows() {
         XCTAssertThrowsError(try Policy.fromDict(["bash_advisory": ["("], "sensitive_globs": [], "allow_tier": [], "locked_paths": [], "mcp_allow": []]))
     }
+
+    // --- widened-default gating verdicts (the feature's core behavior) ---
+    let d = Policy(sensitiveGlobs: ["**/.env*", "**/.ssh/*", "**/.zshrc",
+                                    "**/Library/LaunchAgents/*", "**/.git/hooks/*", "**/.gitconfig"],
+                   allowTier: ["/Users/x/**"], lockedPaths: [], bashAdvisory: [], mcpAllow: [])
+    func testHomeWritePasses() { XCTAssertEqual(d.decide(tool: "Write", toolInput: ["file_path": "/Users/x/proj/a.swift"], cwd: "/Users/x"), .pass) }
+    func testOutsideHomeGates() { XCTAssertEqual(d.decide(tool: "Write", toolInput: ["file_path": "/etc/hosts"], cwd: "/"), .gate) }
+    func testEnvInHomeGates() { XCTAssertEqual(d.decide(tool: "Write", toolInput: ["file_path": "/Users/x/proj/.env"], cwd: "/Users/x"), .gate) }
+    func testZshrcGates() { XCTAssertEqual(d.decide(tool: "Edit", toolInput: ["file_path": "/Users/x/.zshrc"], cwd: "/Users/x"), .gate) }
+    func testLaunchAgentGates() { XCTAssertEqual(d.decide(tool: "Write", toolInput: ["file_path": "/Users/x/Library/LaunchAgents/e.plist"], cwd: "/Users/x"), .gate) }
+    func testGitHookGates() { XCTAssertEqual(d.decide(tool: "Write", toolInput: ["file_path": "/Users/x/proj/.git/hooks/pre-commit"], cwd: "/Users/x"), .gate) }
+
+    // --- summary ---
+    func testSummaryCounts() {
+        XCTAssertEqual(p.summary(), "policy OK: 3 sensitive, 1 allow, 1 locked, 1 bash, 1 mcp")
+    }
+
+    // --- lint: fatal blanket grants (exact match) ---
+    func testLintBlanketFatal() {
+        for g in ["**", "/**", "*", "/*"] {
+            let q = Policy(sensitiveGlobs: [], allowTier: [g], lockedPaths: [], bashAdvisory: [], mcpAllow: [])
+            XCTAssertFalse(q.lint().fatal.isEmpty, "expected \(g) to be fatal")
+        }
+    }
+    func testLintDefaultShapeNotFatalNoWarn() {   // MAJOR-3 anti-regression: /Users/x/** must NOT trip the blanket lint
+        let q = Policy(sensitiveGlobs: ["**/.env*", "**/.ssh/*", "**/.zshrc"], allowTier: ["/Users/x/**"],
+                       lockedPaths: [], bashAdvisory: [], mcpAllow: [])
+        XCTAssertTrue(q.lint().fatal.isEmpty)
+    }
+
+    // --- stricter mcp_allow arity ---
+    func testBadMcpTupleThrows() {
+        XCTAssertThrowsError(try Policy.fromDict(["mcp_allow": [["only-one"]], "sensitive_globs": [], "allow_tier": [], "locked_paths": [], "bash_advisory": []]))
+        XCTAssertThrowsError(try Policy.fromDict(["mcp_allow": [["a", "b", "c"]], "sensitive_globs": [], "allow_tier": [], "locked_paths": [], "bash_advisory": []]))
+    }
+
+    // --- named parse errors ---
+    func testMissingKeyErrorNamesIt() {
+        do { _ = try Policy.fromDict(["sensitive_globs": [], "allow_tier": [], "locked_paths": [], "mcp_allow": []]) ; XCTFail("expected throw") }
+        catch PolicyError.badFile(let why) { XCTAssertTrue(why.contains("bash_advisory")) }
+        catch { XCTFail("wrong error: \(error)") }
+    }
 }
