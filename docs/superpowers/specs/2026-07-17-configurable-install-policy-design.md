@@ -165,6 +165,9 @@ exercises substitution or the policy layer, so the plan's "acceptance exercises 
   risk from `POLICY.md`. It *consumes* this spec's deliverables (the validator + the documented schema), so
   it's sequenced after this one, not folded in. Supersedes the deferred shell "interactive wizard" — a skill
   is the lighter, better-fit form of the same guided-authoring goal.
+- **Plugin packaging (roadmap target):** distribute cc-fido-gate as a Claude Code plugin — plugin manifest
+  bundling the config-authoring skill, install/enroll/teardown as slash commands, `POLICY.md` as reference,
+  and the codesigned binary. Portability (this spec) and the config skill are prerequisites for it; its own spec.
 - Separate low-privilege agent user; per-file allow/block beyond globs; runtime policy reload.
 
 ## Review revisions (round 1 — codex/gemini/Fable/Opus/Pentester → REVISE)
