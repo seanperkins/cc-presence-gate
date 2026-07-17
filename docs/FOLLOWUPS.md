@@ -71,3 +71,18 @@ NotebookEdit (M3), plus the per-task review fixes already committed. The below s
   duplicates the `getpwnam` lookup** already in `Broker`.
 - **Task5 — `install/policy.json` bash_advisory regexes are broad** (e.g. bare `deploy`) — the safe
   (over-gate) direction; eyeball when tuning.
+
+## Configurable install policy (2026-07-17 branch — tracked from final review)
+- **CLI-level executable tests missing (Important).** The spec's §Testing "CLI-level executable test
+  (stdout/stderr/exit)" for `_validate-policy`/`_render-policy` was downgraded to a manual smoke test
+  during implementation. The security-critical emit-on-valid-only / exit-1-no-stdout contract
+  (`Sources/cc-fido/main.swift` `_render-policy` case) has no automated coverage — only the USER-RUN
+  `task7_accept.sh` sections 6-7 and the install script's `sudo test -s` belt. Add a test that spawns
+  the built `cc-fido` and asserts exit code + empty-stdout for a blanket/bad policy and non-empty-stdout
+  for a valid one.
+- **Two untested guard branches (Minor).** `renderPolicy`'s non-absolute-but-nonempty `$HOME` rejection
+  and its exists-but-invalid-JSON source rejection are verified correct by reading but have no test
+  (existing tests hit banned/empty home + missing file only).
+- **task6_hook.sh set -e fragility (Minor, latent).** Under `set -eu -o pipefail`, a non-zero
+  `claude -p` would abort before the `[ -f "$D/.env" ] && … || echo note` reporting line. In practice
+  `claude -p` returns 0 even on a hook denial, so latent; it's a USER-RUN test harness.

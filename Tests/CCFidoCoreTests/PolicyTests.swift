@@ -47,10 +47,12 @@ final class PolicyTests: XCTestCase {
             XCTAssertFalse(q.lint().fatal.isEmpty, "expected \(g) to be fatal")
         }
     }
-    func testLintDefaultShapeNotFatalNoWarn() {   // MAJOR-3 anti-regression: /Users/x/** must NOT trip the blanket lint
-        let q = Policy(sensitiveGlobs: ["**/.env*", "**/.ssh/*", "**/.zshrc"], allowTier: ["/Users/x/**"],
+    func testLintDefaultShapeNotFatalNoWarn() {   // legit non-blanket allow: not fatal AND no warning
+        let q = Policy(sensitiveGlobs: ["**/.env*", "**/.ssh/*", "**/.zshrc"],
+                       allowTier: [NSHomeDirectory() + "/**"],
                        lockedPaths: [], bashAdvisory: [], mcpAllow: [])
         XCTAssertTrue(q.lint().fatal.isEmpty)
+        XCTAssertTrue(q.lint().warnings.isEmpty, "a legit existing dir/** must not warn: \(q.lint().warnings)")
     }
     func testStaticPrefixKeepsFullDir() {
         XCTAssertEqual(Policy.staticPrefix("/Users/x/**"), "/Users/x")

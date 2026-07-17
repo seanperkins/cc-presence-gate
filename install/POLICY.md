@@ -13,7 +13,7 @@ with your home, validates, and installs atomically — a broken or blanket polic
 leaves the previous one intact. Check a file yourself any time with
 `/opt/cc-fido-gate/cc-fido _validate-policy <file>`.
 
-## Verdict order (writes: Write/Edit/MultiEdit/NotebookEdit)
+## Verdict order (writes: Write/Edit only)
 1. `locked_paths` → **deny** (hard, with a nudge)
 2. `sensitive_globs` → **gate** (touch required)
 3. `allow_tier` → **pass** (no touch)
@@ -22,6 +22,8 @@ leaves the previous one intact. Check a file yourself any time with
 `sensitive_globs` is checked *before* `allow_tier`, so a broad `allow_tier` can never un-gate a
 sensitive path. Bash: a command matching any `bash_advisory` regex → gate, else pass. MCP: a
 `mcp__server__tool` call whose `[server, tool]` is in `mcp_allow` → pass, else gate.
+`MultiEdit`/`NotebookEdit` (and any other tool not named above) are **always gated** — they never
+take the `allow_tier` pass, erring safe rather than extending the ladder to them.
 
 ## Fields
 - **`sensitive_globs`** — globs that always gate. Defaults cover secrets (`.env*`, `*.pem`,
