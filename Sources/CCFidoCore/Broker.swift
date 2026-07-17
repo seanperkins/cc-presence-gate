@@ -211,10 +211,9 @@ public final class Broker {
 
     func handleGuarded(_ conn: Int32) {
         defer { close(conn) }
-        // REAL absolute wall-clock cap (round-2 fix): SO_RCVTIMEO is only a per-recv idle timeout and a
-        // slow-drip peer can reset it forever, holding the ceremony flock and starving every other write.
-        // A one-shot watchdog thread shutdown()s the connection at start+deadline, which unblocks any
-        // recv AND (because the fd is force-closed) collapses the ceremony so the flock defer releases.
+        // Absolute wall-clock cap: SO_RCVTIMEO is only a per-recv idle timeout and a slow-drip peer can reset
+        // it forever, pinning a connection/thread indefinitely. A one-shot watchdog thread shutdown()s the
+        // connection at start+deadline, which unblocks any pending recv and collapses this ceremony.
         var tv = timeval(tv_sec: 90, tv_usec: 0)   // belt: per-recv idle bound
         setsockopt(conn, SOL_SOCKET, SO_RCVTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
         let done = DispatchSemaphore(value: 0)
@@ -224,14 +223,13 @@ public final class Broker {
             }
         }
         defer { done.signal() }
-        // flock is load-bearing BEYOND serialization: auditAppend is read-modify-write (reads all lines to
-        // compute seq/prev_hash, then appends) and is NOT atomic — two concurrent ceremonies would both write
-        // seq=N and corrupt the chain. The flock serializes them. Do NOT drop it when tuning the watchdog;
-        // if per-connection concurrency is ever wanted, give auditAppend its own flock on the audit file.
-        let lockFD = open(Paths.ceremonyLock, O_CREAT | O_RDWR, 0o600)
-        if lockFD < 0 { return }
-        if flock(lockFD, LOCK_EX) != 0 { close(lockFD); return }
-        defer { flock(lockFD, LOCK_UN); close(lockFD) }
+        // Ceremonies run CONCURRENTLY — no ceremony-wide lock (task3 DoS fix). Previously this flock wrapped
+        // the whole ceremony INCLUDING the human-touch wait, so a slow client that grabbed it first starved
+        // every other write for up to ceremonyDeadline. The only shared state needing serialization is the
+        // audit hash-chain RMW, which auditAppend now guards with its own flock. Residual: same-path
+        // concurrent uchgWrite can race, but stays fail-safe — _ccfido ownership (not the uchg flag) is the
+        // write barrier, and the loser gets a spurious write_error with the target left relocked. See
+        // docs/FOLLOWUPS.md.
         do { try handle(conn) } catch { /* malformed/aborted/deadline: drop */ }
     }
 }

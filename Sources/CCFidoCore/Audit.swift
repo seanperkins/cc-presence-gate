@@ -9,6 +9,16 @@ func auditLines(_ path: String) -> [String] {
     (try? String(contentsOfFile: path, encoding: .utf8))?.split(separator: "\n").map(String.init) ?? []
 }
 public func auditAppend(_ entry: [String: Any], path: String = Paths.audit) throws {
+    // Serialize the hash-chain read-modify-write (read all lines → derive seq/prev_hash → append). This is
+    // the ONLY shared state that must be serial across concurrent ceremonies; the broker no longer holds a
+    // ceremony-wide lock (that one serialized the human-touch wait, letting a slow client starve every write
+    // — task3 DoS). Lock keyed to the audit path so each log (incl. per-test temp logs) has its own lock; the
+    // sibling `.lock` under keydir is control-denied for execute-write by the keydir-prefix rule.
+    let lockFD = open(path + ".lock", O_CREAT | O_RDWR, 0o600)
+    guard lockFD >= 0 else { throw WireError.eof }
+    defer { close(lockFD) }
+    guard flock(lockFD, LOCK_EX) == 0 else { throw WireError.eof }
+    defer { flock(lockFD, LOCK_UN) }
     let lines = auditLines(path)
     var rec = entry
     rec["seq"] = lines.count

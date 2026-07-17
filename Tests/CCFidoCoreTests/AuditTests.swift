@@ -14,4 +14,16 @@ final class AuditTests: XCTestCase {
         try (lines.joined(separator: "\n") + "\n").write(toFile: p, atomically: true, encoding: .utf8)
         XCTAssertFalse(auditVerifyChain(path: p))
     }
+
+    // Concurrent ceremonies append to the chain in parallel (the broker no longer holds a ceremony-wide
+    // lock — task3 DoS fix). auditAppend must serialize its own read-modify-write so no two records land on
+    // the same seq/prev_hash. Without the internal flock the seqs collide and the chain fails to verify.
+    func testConcurrentAppendsKeepChainIntact() {
+        let p = tmp(); let n = 100
+        DispatchQueue.concurrentPerform(iterations: n) { i in
+            try? auditAppend(["event": "e\(i)"], path: p)
+        }
+        XCTAssertEqual(auditLines(p).count, n)      // every append durably landed
+        XCTAssertTrue(auditVerifyChain(path: p))    // seq/prev_hash chain intact despite concurrency
+    }
 }

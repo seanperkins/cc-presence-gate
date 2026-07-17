@@ -27,6 +27,13 @@ NotebookEdit (M3), plus the per-task review fixes already committed. The below s
   An operator can't see *why* a tool was blocked at the hook tier.
 
 ## Hardening / latent
+- **Task3 — same-path concurrent `uchgWrite` can race** (introduced when the ceremony-wide flock was
+  narrowed to the audit chain so ceremonies run concurrently — the task3 slow-loris DoS fix; see
+  `Broker.handleGuarded` + `auditAppend`). Two *separately-touched* ceremonies writing the SAME enrolled
+  target can interleave `chflags`/write/relock. Fail-safe: `_ccfido` ownership (not the `uchg` flag) is the
+  real write barrier, so no agent-writable window opens; the loser gets a spurious `write_error` and the
+  target is always left relocked. Only the audit chain's RMW is serialized (its own flock). Fix if ever
+  needed: a per-path write lock around `uchgWrite`. Pathological for a single-user tool.
 - **Task5 — `Policy.init` is `public` + `try!`-on-regex.** Safe today (only `fromDict`/tests reach it;
   untrusted input validates first). Landmine if future code builds `Policy` from raw strings. Fix:
   make the non-throwing init `internal`.
