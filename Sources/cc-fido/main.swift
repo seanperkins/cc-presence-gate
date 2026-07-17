@@ -3,7 +3,7 @@ import CCFidoCore
 
 let args = Array(CommandLine.arguments.dropFirst())
 func usage() -> Never {
-    FileHandle.standardError.write(Data("usage: cc-fido {daemon|hook|write <path>|enroll|install|enroll-file <path> [mode]|enroll-dir <path>}\n".utf8))
+    FileHandle.standardError.write(Data("usage: cc-fido {daemon|hook|write <path>|enroll|install|enroll-file <path> [mode]|enroll-dir <path>|_validate-policy <path>|_render-policy <src> <home>}\n".utf8))
     exit(2)
 }
 
@@ -50,6 +50,38 @@ case "_blink-test":
 case "_verify-audit":   // runs AS _ccfido so it can read the 0600 _ccfido-owned audit log
     if auditVerifyChain() { print("audit chain OK"); exit(0) }
     FileHandle.standardError.write(Data("audit chain BROKEN\n".utf8)); exit(1)
+case "_validate-policy":   // read-only: parse + summary + lint. exactly one path.
+    guard args.count == 2 else { usage() }
+    do {
+        let policy = try Policy.fromFile(args[1])
+        let (fatal, warnings) = policy.lint()
+        for w in warnings { FileHandle.standardError.write(Data("cc-fido: WARNING \(w)\n".utf8)) }
+        guard fatal.isEmpty else {
+            for f in fatal { FileHandle.standardError.write(Data("cc-fido: FATAL \(f)\n".utf8)) }
+            exit(1)
+        }
+        print(policy.summary()); exit(0)
+    } catch {
+        FileHandle.standardError.write(Data("cc-fido: invalid policy: \(error)\n".utf8)); exit(1)
+    }
+case "_render-policy":   // substitute __HOME__, guard home, validate + lint, emit JSON on success ONLY.
+    guard args.count == 3 else { usage() }
+    do {
+        let rendered = try renderPolicy(srcPath: args[1], home: args[2])
+        guard let obj = try JSONSerialization.jsonObject(with: rendered) as? [String: Any] else {
+            throw PolicyError.badFile("rendered policy is not a JSON object")
+        }
+        let policy = try Policy.fromDict(obj)
+        let (fatal, warnings) = policy.lint()
+        for w in warnings { FileHandle.standardError.write(Data("cc-fido: WARNING \(w)\n".utf8)) }
+        guard fatal.isEmpty else {
+            for f in fatal { FileHandle.standardError.write(Data("cc-fido: FATAL \(f)\n".utf8)) }
+            exit(1)   // NO stdout — a downstream `tee` writes nothing, live policy untouched
+        }
+        FileHandle.standardOutput.write(rendered); exit(0)   // emit only when valid
+    } catch {
+        FileHandle.standardError.write(Data("cc-fido: render failed: \(error)\n".utf8)); exit(1)
+    }
 // runs AS _ccfido (via `sudo -u _ccfido`) so it can write the 0600 _ccfido-owned custody.json:
 case "_registry-add":
     guard args.count >= 3, args[1] == "file" || args[1] == "dir" else { usage() }
