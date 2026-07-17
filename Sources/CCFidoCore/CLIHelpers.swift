@@ -17,7 +17,7 @@ public func renderPlist(binary: String = Paths.code + "/cc-fido") -> String {
 }
 public func renderManagedSettings(hookCmd: String) -> String {
     let obj: [String: Any] = ["allowManagedHooksOnly": true,
-        "hooks": ["PreToolUse": [["matcher": "Write|Edit|Bash|mcp__.*",
+        "hooks": ["PreToolUse": [["matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash|mcp__.*",
                                   "hooks": [["type": "command", "command": hookCmd, "timeout": 90]]]]]]
     return String(data: try! JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .sortedKeys]), encoding: .utf8)!
 }

@@ -21,8 +21,12 @@ public func auditAppend(_ entry: [String: Any], path: String = Paths.audit) thro
     defer { close(fd) }
     let ok = line.withUTF8 { p -> Bool in
         var off = 0
-        while off < p.count { let w = write(fd, p.baseAddress!.advanced(by: off), p.count - off)
-            if w <= 0 { return false }; off += w }
+        while off < p.count {
+            let w = write(fd, p.baseAddress!.advanced(by: off), p.count - off)
+            if w < 0 && errno == EINTR { continue }   // house-style: retry on signal interruption (final-review M2)
+            if w <= 0 { return false }
+            off += w
+        }
         return true
     }
     fsync(fd)
