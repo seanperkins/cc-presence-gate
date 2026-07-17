@@ -116,7 +116,7 @@ public final class Broker {
     // decideApprove built, verifies the signature against that SAME challenge, audits approve_ok — never
     // calls uchgWrite.
     func handleApprove(_ fd: Int32, _ req: [String: Any], _ caller: Int) throws {
-        guard let (challengeB64, human) = try? decideApprove(req, caller: caller) else {
+        guard let (challengeB64, human, doc) = try? decideApprove(req, caller: caller) else {
             try sendMsg(fd, ["phase": "result", "status": "deny", "reason": "bad request"]); return
         }
         guard let challenge = Data(base64Encoded: challengeB64) else {
@@ -124,14 +124,18 @@ public final class Broker {
         }
         try sendMsg(fd, ["phase": "challenge", "challenge_b64": challengeB64, "human_rendering": human])
         let reply = try recvMsg(fd)
+        // Audit records WHAT was approved (tool + payload hash) so the log is a real forensic record of
+        // the WYSIWYS ceremony — consistent shape on both approve_ok and deny. (Task-3 review Important.)
         guard reply["phase"] as? String == "signature",
               let sigB64 = reply["signature_b64"] as? String, let sig = Data(base64Encoded: sigB64),
               verify(challenge: challenge, signature: sig, allowedSigners: allowedSigners,
                      principal: Paths.principal, namespace: Paths.namespace) else {
-            try auditAppend(["event": "deny", "op": "approve", "caller": caller])
+            try auditAppend(["event": "deny", "op": "approve", "tool": doc.path,
+                             "content_sha256": doc.contentSha256, "caller": caller])
             try sendMsg(fd, ["phase": "result", "status": "deny", "reason": "no valid touch"]); return
         }
-        try auditAppend(["event": "approve_ok", "caller": caller])
+        try auditAppend(["event": "approve_ok", "op": "approve", "tool": doc.path,
+                         "content_sha256": doc.contentSha256, "caller": caller])
         try sendMsg(fd, ["phase": "result", "status": "ok"])
     }
 
@@ -233,16 +237,16 @@ public final class Broker {
 }
 
 extension Broker {
-    public func decideApprove(_ req: [String: Any], caller: Int) throws -> (challengeB64: String, human: String) {
+    public func decideApprove(_ req: [String: Any], caller: Int) throws -> (challengeB64: String, human: String, doc: SignedDocument) {
         guard let tool = req["tool"] as? String else { throw WireError.badBody }
-        let payload = try canonicalJSON(["tool": tool, "input": req["input"] ?? [:],
-                                         "cwd": req["cwd"] as? String ?? ""])
+        let cwd = req["cwd"] as? String ?? ""
+        let payload = try canonicalJSON(["tool": tool, "input": req["input"] ?? [:], "cwd": cwd])
         let doc = buildSignedDocument(op: "approve", path: tool, contentSha256: sha256Hex(payload),
-                                      cwd: req["cwd"] as? String ?? "",
+                                      cwd: cwd,
                                       nonceHex: (0..<16).map { _ in String(format:"%02x", UInt8.random(in:0...255)) }.joined(),
                                       callerUid: caller)
         // humanRendering already prints "APPROVE <tool>" (doc.op/doc.path) — don't double it (round-2 cosmetic).
         let human = humanRendering(doc, content: payload)
-        return (try canonicalBytes(doc).base64EncodedString(), human)
+        return (try canonicalBytes(doc).base64EncodedString(), human, doc)
     }
 }
