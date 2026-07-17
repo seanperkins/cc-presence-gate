@@ -4,7 +4,7 @@ REPO="$(cd "$(dirname "$0")/../.." && pwd)"; CLAUDE_BIN="${CLAUDE_BIN:-/Users/se
 swift build -c release --package-path "$REPO"; BIN="$REPO/.build/release/cc-fido"
 sudo mkdir -p /opt/cc-fido-gate
 POLICY_CAND=/opt/cc-fido-gate/policy.json.new
-trap 'sudo rm -f "$POLICY_CAND"' EXIT
+trap 'sudo rm -f "$POLICY_CAND"; [ -n "${DPID:-}" ] && sudo kill "$DPID" 2>/dev/null || true' EXIT
 "$BIN" _render-policy "$REPO/install/policy.json" "$HOME" | sudo tee "$POLICY_CAND" >/dev/null
 sudo test -s "$POLICY_CAND"
 sudo mv "$POLICY_CAND" /opt/cc-fido-gate/policy.json
