@@ -1,5 +1,5 @@
-# scripts/userrun/task7_enroll.sh
 #!/bin/bash
+# scripts/userrun/task7_enroll.sh
 set -eu
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"; SIGN=/opt/homebrew/opt/openssh/bin/ssh-keygen
 swift build -c release --package-path "$REPO"; BIN="$REPO/.build/release/cc-fido"

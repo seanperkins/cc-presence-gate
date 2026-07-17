@@ -1,5 +1,5 @@
-# scripts/userrun/task7_install.sh — full privileged install + canary. Requires sudo.
 #!/bin/bash
+# scripts/userrun/task7_install.sh — full privileged install + canary. Requires sudo.
 set -eu -o pipefail
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 swift build -c release --package-path "$REPO"; BIN="$REPO/.build/release/cc-fido"
