@@ -52,6 +52,17 @@ final class PolicyTests: XCTestCase {
                        lockedPaths: [], bashAdvisory: [], mcpAllow: [])
         XCTAssertTrue(q.lint().fatal.isEmpty)
     }
+    func testStaticPrefixKeepsFullDir() {
+        XCTAssertEqual(Policy.staticPrefix("/Users/x/**"), "/Users/x")
+        XCTAssertEqual(Policy.staticPrefix("/Users/x/*"), "/Users/x")
+        XCTAssertEqual(Policy.staticPrefix("/Users/x/y/**"), "/Users/x/y")
+        XCTAssertEqual(Policy.staticPrefix("/Users/x/foo*bar"), "/Users/x")
+    }
+    func testLintWarnsOnNonexistentPrefix() {
+        let q = Policy(sensitiveGlobs: ["a","b","c"], allowTier: ["/no-such-dir-zzz/**"], lockedPaths: [], bashAdvisory: [], mcpAllow: [])
+        XCTAssertTrue(q.lint().fatal.isEmpty)
+        XCTAssertTrue(q.lint().warnings.contains { $0.contains("/no-such-dir-zzz") }, "expected a warning naming the nonexistent prefix")
+    }
 
     // --- stricter mcp_allow arity ---
     func testBadMcpTupleThrows() {

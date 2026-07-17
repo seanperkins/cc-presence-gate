@@ -110,6 +110,8 @@ public struct Policy {
     /// The literal directory prefix of a glob, up to the segment containing the first metacharacter.
     static func staticPrefix(_ glob: String) -> String {
         guard let i = glob.firstIndex(where: { "*?[".contains($0) }) else { return glob }
-        return (String(glob[..<i]) as NSString).deletingLastPathComponent
+        let head = String(glob[..<i])
+        if head.hasSuffix("/") { return String(head.dropLast()) }   // "/Users/x/" -> "/Users/x"
+        return (head as NSString).deletingLastPathComponent          // "/Users/x/foo" -> "/Users/x"
     }
 }
