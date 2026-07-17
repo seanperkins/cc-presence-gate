@@ -3,6 +3,7 @@
 # Exercises the live LaunchDaemon install end-to-end: dir-custody of the design's primary adversary
 # path, file-custody with broker-write-after-touch, the C-3 control-path denial, and audit integrity.
 set -u
+REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 BIN=/opt/cc-fido-gate/cc-fido
 LA="$HOME/Library/LaunchAgents"
 BENIGN=/Users/Shared/ccfido-accept.txt
@@ -33,6 +34,17 @@ echo "$OUT" | grep -qi 'deny\|not an enrolled' && pass "control-path write denie
 echo "=== 5. audit chain valid AND at least one write_ok present (empty-chain guard) ==="
 sudo -u _ccfido "$BIN" _verify-audit && pass "audit chain OK" || fail "audit chain broken"
 sudo grep -q '"event":"write_ok"' /var/ccfido/audit.log && pass "write_ok event present" || fail "no write_ok event in log"
+
+echo "=== 6. installed policy is portable + substituted (no placeholder, home present) ==="
+sudo grep -q __HOME__ /opt/cc-fido-gate/policy.json && fail "installed policy still contains __HOME__" || pass "no __HOME__ placeholder survived"
+sudo grep -q "\"$HOME/\*\*\"" /opt/cc-fido-gate/policy.json && pass "allow_tier substituted to \$HOME" || fail "allow_tier not substituted to \$HOME"
+sudo /opt/cc-fido-gate/cc-fido _validate-policy /opt/cc-fido-gate/policy.json >/dev/null && pass "installed policy validates" || fail "installed policy does not validate"
+
+echo "=== 7. a broken custom POLICY aborts install and leaves the good policy intact ==="
+GOOD_SHA=$(sudo shasum -a 256 /opt/cc-fido-gate/policy.json | cut -d' ' -f1)
+printf '{"allow_tier":["("],"sensitive_globs":[],"locked_paths":[],"bash_advisory":["("],"mcp_allow":[]}' > /tmp/pol-bad.json
+POLICY=/tmp/pol-bad.json bash "$REPO/scripts/userrun/task7_install.sh" >/dev/null 2>&1 && fail "install accepted a broken policy" || pass "install rejected the broken policy"
+[ "$(sudo shasum -a 256 /opt/cc-fido-gate/policy.json | cut -d' ' -f1)" = "$GOOD_SHA" ] && pass "good policy left byte-for-byte intact" || fail "good policy was clobbered by a failed install"
 
 echo
 [ "$FAILED" = 0 ] && echo "RESULT: GREEN" || echo "RESULT: RED"
