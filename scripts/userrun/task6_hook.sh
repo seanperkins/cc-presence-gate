@@ -19,4 +19,3 @@ echo ">>> APPROVE + TOUCH when the dialog appears <<<"
   --model claude-haiku-4-5-20251001 --settings "$D/settings.json" --dangerously-skip-permissions --allowedTools Write < /dev/null
 # .env lives in the per-run $D (fresh each run) so a stale file can't false-PASS without a new touch:
 [ -f "$D/.env" ] && echo "PASS: gated write completed after touch" || echo "note: denied (expected if touch withheld)"
-sudo kill "$DPID" 2>/dev/null
