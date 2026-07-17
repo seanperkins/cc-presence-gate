@@ -55,3 +55,29 @@ public func negativeBlinkTest(handle: String, namespace: String, window: Int = 8
     FileHandle.standardError.write(Data(">>> Now TOUCH the key (positive control) <<<\n".utf8))
     return (try? sign(challenge: Data("positive-control".utf8), handlePath: handle, namespace: namespace, retries: 1)) != nil
 }
+
+public enum RenderError: Error { case badHome(String), badSource(String) }
+
+/// Reads a policy template, guards `home`, substitutes `__HOME__`→`home` in every JSON string value
+/// (parse → walk → re-serialize, so a home with `"`/`\`/`&` can never corrupt the JSON), and returns
+/// pretty JSON. Does NOT check policy semantics — the caller runs `Policy.fromDict` + `lint()`.
+public func renderPolicy(srcPath: String, home: String) throws -> Data {
+    let banned: Set<String> = ["", "/", "/var/root", "/root"]
+    guard !banned.contains(home), (home as NSString).isAbsolutePath else {
+        throw RenderError.badHome("refusing HOME='\(home)' — run as the login user, not root")
+    }
+    guard let data = try? Data(contentsOf: URL(fileURLWithPath: srcPath)) else {
+        throw RenderError.badSource("cannot read \(srcPath)")
+    }
+    guard let obj = try? JSONSerialization.jsonObject(with: data) else {
+        throw RenderError.badSource("invalid JSON in \(srcPath)")
+    }
+    let substituted = substituteHome(obj, home)
+    return try JSONSerialization.data(withJSONObject: substituted, options: [.prettyPrinted, .sortedKeys])
+}
+private func substituteHome(_ v: Any, _ home: String) -> Any {
+    if let s = v as? String { return s.replacingOccurrences(of: "__HOME__", with: home) }
+    if let a = v as? [Any] { return a.map { substituteHome($0, home) } }
+    if let d = v as? [String: Any] { return d.mapValues { substituteHome($0, home) } }
+    return v
+}
