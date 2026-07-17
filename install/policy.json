@@ -1,0 +1,24 @@
+{
+  "sensitive_globs": [
+    "**/.env*",
+    "**/.ssh/id_*",
+    "**/.ssh/authorized_keys",
+    "**/*.pem",
+    "**/credentials*"
+  ],
+  "allow_tier": [
+    "/Users/sean/proj/**",
+    "/Users/sean/sites/**"
+  ],
+  "locked_paths": [],
+  "bash_advisory": [
+    "git push .*(--force|-f)\\b",
+    "rm -rf .*",
+    "deploy",
+    "kubectl delete .*"
+  ],
+  "mcp_allow": [
+    ["gh", "list_prs"],
+    ["gh", "get_issue"]
+  ]
+}
