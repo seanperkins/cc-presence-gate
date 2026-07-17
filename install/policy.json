@@ -1,14 +1,26 @@
 {
   "sensitive_globs": [
     "**/.env*",
-    "**/.ssh/id_*",
-    "**/.ssh/authorized_keys",
     "**/*.pem",
-    "**/credentials*"
+    "**/credentials*",
+    "**/.ssh/*",
+    "**/.zshrc",
+    "**/.zprofile",
+    "**/.zshenv",
+    "**/.bashrc",
+    "**/.bash_profile",
+    "**/.profile",
+    "**/Library/LaunchAgents/*",
+    "**/Library/LaunchDaemons/*",
+    "**/.gitconfig",
+    "**/.config/git/*",
+    "**/.git/hooks/*",
+    "**/.claude/settings*.json",
+    "**/.claude/CLAUDE.md",
+    "**/.claude/hooks/*"
   ],
   "allow_tier": [
-    "/Users/sean/proj/**",
-    "/Users/sean/sites/**"
+    "__HOME__/**"
   ],
   "locked_paths": [],
   "bash_advisory": [
