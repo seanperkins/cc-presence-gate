@@ -17,4 +17,8 @@ public enum Paths {
     public static let verifyKeygen = "/usr/bin/ssh-keygen"
     // execute-write is UNCONDITIONALLY denied to these + anything under keydir/code:
     public static let controlDenylist = [allowedSigners, audit, custody, ceremonyLock, sock, policy]
+    public static let launchdLabel = "com.cc-fido-gate.brokerd"
+    public static let plist = "/Library/LaunchDaemons/com.cc-fido-gate.brokerd.plist"
+    public static let claudeCodeDir = "/Library/Application Support/ClaudeCode"
+    public static let managedSettings = "/Library/Application Support/ClaudeCode/managed-settings.json"
 }
