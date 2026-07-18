@@ -33,7 +33,14 @@ public func installPrereqs(policySrc: String, home: String, binarySource: String
     let stagedBinary = dest + ".new"
     try? fm.removeItem(atPath: stagedBinary)
     try fm.copyItem(atPath: binarySource, toPath: stagedBinary)
-    try fm.moveItem(atPath: stagedBinary, toPath: dest)   // atomic replace
+    // POSIX rename, not FileManager.moveItem: moveItem throws NSFileWriteFileExistsError when
+    // `dest` already exists (the normal re-install/repair case), whereas rename(2) atomically
+    // replaces an existing destination on the same filesystem — which staged and dest are.
+    if rename(stagedBinary, dest) != 0 {
+        let err = String(cString: strerror(errno))
+        try? fm.removeItem(atPath: stagedBinary)           // don't leave an orphan .new on failure
+        throw InstallError.failed("install binary: rename \(stagedBinary) -> \(dest): \(err)")
+    }
     if run("/usr/bin/codesign", ["--force", "--options", "runtime", "--sign", "-", dest]).0 != 0 {
         throw InstallError.failed("codesign")
     }
@@ -44,7 +51,13 @@ public func installPrereqs(policySrc: String, home: String, binarySource: String
     let (fatal, _) = policy.lint(); if !fatal.isEmpty { throw InstallError.failed("policy: \(fatal.joined(separator: "; "))") }
     let cand = Paths.policy + ".new"
     try rendered.write(to: URL(fileURLWithPath: cand))
-    try fm.moveItem(atPath: cand, toPath: Paths.policy)   // atomic
+    // Same rename-not-moveItem reasoning as the binary above: rename(2) overwrites an existing
+    // Paths.policy atomically; moveItem would throw on a re-install where the policy already exists.
+    if rename(cand, Paths.policy) != 0 {
+        let err = String(cString: strerror(errno))
+        try? fm.removeItem(atPath: cand)                   // don't leave an orphan .new on failure
+        throw InstallError.failed("install policy: rename \(cand) -> \(Paths.policy): \(err)")
+    }
     // Ship the (unsubstituted) template next to the binary so re-installs have a default source.
     // Skip the remove+copy when policySrc already IS the staging destination (a --policy-less
     // re-install defaults policySrc to this same path via installRepoPolicyDefault()) — same
