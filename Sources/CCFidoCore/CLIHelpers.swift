@@ -30,6 +30,12 @@ public func ccVersion(_ claudeBin: String) -> String {
     if let m = s.range(of: #"\d+\.\d+\.\d+"#, options: .regularExpression) { return String(s[m]) }
     return "unknown"
 }
+/// Value immediately following `flag` in `args`, or nil if `flag` is absent or has no trailing value
+/// (a flag as the last arg must not index out of bounds).
+public func flagValue(_ flag: String, in args: [String]) -> String? {
+    guard let i = args.firstIndex(of: flag), i + 1 < args.count else { return nil }
+    return args[i + 1]
+}
 @discardableResult
 public func runPrivileged(_ argv: [String]) -> Bool {
     let p = Process(); p.executableURL = URL(fileURLWithPath: "/usr/bin/sudo"); p.arguments = argv

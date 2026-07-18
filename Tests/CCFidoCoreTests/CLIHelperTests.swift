@@ -47,4 +47,14 @@ final class CLIHelperTests: XCTestCase {
         XCTAssertTrue(s.contains("**/.env*"))
         XCTAssertFalse(s.contains(#"\/"#), "no slash should be escaped as \\/")
     }
+    func testFlagValueReturnsTrailingArg() {
+        XCTAssertEqual(flagValue("--keys", in: ["enroll", "--keys", "3"]), "3")
+    }
+    func testFlagValueNilWhenFlagAbsent() {
+        XCTAssertNil(flagValue("--keys", in: ["enroll"]))
+    }
+    func testFlagValueNilWhenFlagIsLastArg() {
+        // must not trap on out-of-bounds access when the flag has no trailing value
+        XCTAssertNil(flagValue("--keys", in: ["enroll", "--keys"]))
+    }
 }

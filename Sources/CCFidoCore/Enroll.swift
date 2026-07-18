@@ -16,13 +16,17 @@ public func runEnroll(home: String, keys: Int) throws {
     let dir = "\(home)/.ccfido"
     try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
     _ = run("/bin/chmod", ["700", dir])
+    let count = max(1, keys)
     for (i, argv) in enrollPlan(home: home, keys: keys).enumerated() {
         let n = i + 1
-        FileHandle.standardError.write(Data(">>> TOUCH to enroll key #\(n) of \(keys) <<<\n".utf8))
+        FileHandle.standardError.write(Data(">>> TOUCH to enroll key #\(n) of \(count) <<<\n".utf8))
         if run(Paths.signKeygen, argv).0 != 0 { throw EnrollError.failed("ssh-keygen key #\(n)") }
         _ = run("/bin/chmod", ["600", "\(dir)/gate_sk\(n)"])
-        let pub = (try? String(contentsOfFile: "\(dir)/gate_sk\(n).pub", encoding: .utf8))?
-            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        // a failed or empty pubkey read must NOT silently register a keyless principal (printf '' exits 0)
+        guard let pub = (try? String(contentsOfFile: "\(dir)/gate_sk\(n).pub", encoding: .utf8))?
+                .trimmingCharacters(in: .whitespacesAndNewlines), !pub.isEmpty else {
+            throw EnrollError.failed("read pubkey #\(n)")
+        }
         // one escalation: append to the root-owned allowed_signers
         if !runPrivileged(["/bin/sh", "-c", "printf 'gate-principal %s\\n' '\(pub)' >> \(Paths.allowedSigners)"]) {
             throw EnrollError.failed("register key #\(n)")

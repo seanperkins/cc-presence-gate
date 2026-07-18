@@ -50,7 +50,7 @@ case "install":
     guard getuid() == 0 else {
         FileHandle.standardError.write(Data("cc-fido install: must run as root — use: sudo cc-fido install\n".utf8)); exit(1)
     }
-    let policySrc = args.firstIndex(of: "--policy").map { args[$0 + 1] } ?? (installRepoPolicyDefault())
+    let policySrc = flagValue("--policy", in: args) ?? (installRepoPolicyDefault())
     let home = realLoginHome()   // login user's home (from SUDO_USER), NOT root's /var/root
     do {
         try installPrereqs(policySrc: policySrc, home: home, binarySource: CommandLine.arguments[0], platform: MacOSPlatform())
@@ -59,7 +59,7 @@ case "install":
     } catch { FileHandle.standardError.write(Data("cc-fido install failed: \(error)\n".utf8)); exit(1) }
 case "enroll":
     if getuid() == 0 { FileHandle.standardError.write(Data("cc-fido enroll: run as your login user (not sudo) — it needs your key + a touch\n".utf8)); exit(1) }
-    let keys = args.firstIndex(of: "--keys").flatMap { Int(args[$0 + 1]) } ?? 1
+    let keys = flagValue("--keys", in: args).flatMap { Int($0) } ?? 1
     do { try runEnroll(home: NSHomeDirectory(), keys: keys); print("cc-fido: enrolled. Next: sudo cc-fido activate"); exit(0) }
     catch { FileHandle.standardError.write(Data("cc-fido enroll failed: \(error)\n".utf8)); exit(1) }
 case "_render-plist": print(renderPlist()); exit(0)
