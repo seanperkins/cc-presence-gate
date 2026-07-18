@@ -12,4 +12,13 @@ final class InstallTests: XCTestCase {
         XCTAssertTrue(p.calls.contains("writeManaged"))
         XCTAssertFalse(p.calls.contains("activateDaemon"))   // install never starts the daemon
     }
+
+    func testActivateRefusesWithoutKey_thenActivates() throws {
+        // activate must refuse if allowed_signers is absent; with a key present, it calls activateDaemon.
+        let p = MockPlatform()
+        XCTAssertThrowsError(try activate(platform: p, keyEnrolled: false))
+        XCTAssertFalse(p.calls.contains("activateDaemon"))
+        try activate(platform: p, keyEnrolled: true)
+        XCTAssertTrue(p.calls.contains("activateDaemon"))
+    }
 }

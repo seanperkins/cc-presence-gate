@@ -2,6 +2,13 @@ import Foundation
 
 public enum InstallError: Error { case notRoot, failed(String) }
 
+/// Boots the LaunchDaemon (fresh socket). Refuses if no key is enrolled (the daemon would deny everything).
+/// `keyEnrolled` is injected so it's unit-testable; the subcommand passes the real allowed_signers check.
+public func activate(platform: Platform, keyEnrolled: Bool) throws {
+    guard keyEnrolled else { throw InstallError.failed("no key enrolled — run `cc-fido enroll` first") }
+    try platform.activateDaemon()
+}
+
 /// Platform-driven prereqs: account + daemon plist + managed-settings. Unit-tested against MockPlatform.
 public func installOrchestration(platform: Platform) throws {
     if !platform.serviceAccountExists(name: "_ccfido") { try platform.createServiceAccount(name: "_ccfido") }

@@ -3,7 +3,7 @@ import CCFidoCore
 
 let args = Array(CommandLine.arguments.dropFirst())
 func usage() -> Never {
-    FileHandle.standardError.write(Data("usage: cc-fido {daemon|hook|write <path>|enroll [--keys N]|install [--policy PATH]|enroll-file <path> [mode]|enroll-dir <path>|status [--json]|_validate-policy <path>|_render-policy <src> <home>}\n".utf8))
+    FileHandle.standardError.write(Data("usage: cc-fido {daemon|hook|write <path>|enroll [--keys N]|install [--policy PATH]|activate|enroll-file <path> [mode]|enroll-dir <path>|status [--json]|_validate-policy <path>|_render-policy <src> <home>}\n".utf8))
     exit(2)
 }
 
@@ -57,6 +57,18 @@ case "install":
         print("cc-fido: prereqs installed. Next: cc-fido enroll  (then: sudo cc-fido activate)")
         exit(0)
     } catch { FileHandle.standardError.write(Data("cc-fido install failed: \(error)\n".utf8)); exit(1) }
+case "activate":
+    guard getuid() == 0 else {
+        FileHandle.standardError.write(Data("cc-fido activate: must run as root — use: sudo cc-fido activate\n".utf8)); exit(1)
+    }
+    let enrolled = (try? String(contentsOfFile: Paths.allowedSigners, encoding: .utf8))?.isEmpty == false
+    do {
+        try activate(platform: MacOSPlatform(), keyEnrolled: enrolled)
+        usleep(1_000_000)
+        let running = MacOSPlatform().daemonState().running
+        print("cc-fido: daemon activated — socket \(running ? "reachable" : "NOT reachable (re-run activate)")")
+        exit(running ? 0 : 1)
+    } catch { FileHandle.standardError.write(Data("cc-fido activate failed: \(error)\n".utf8)); exit(1) }
 case "enroll":
     if getuid() == 0 { FileHandle.standardError.write(Data("cc-fido enroll: run as your login user (not sudo) — it needs your key + a touch\n".utf8)); exit(1) }
     let keys = flagValue("--keys", in: args).flatMap { Int($0) } ?? 1
