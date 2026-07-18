@@ -3,7 +3,7 @@ import CCFidoCore
 
 let args = Array(CommandLine.arguments.dropFirst())
 func usage() -> Never {
-    FileHandle.standardError.write(Data("usage: cc-fido {daemon|hook|write <path>|enroll|install|enroll-file <path> [mode]|enroll-dir <path>|_validate-policy <path>|_render-policy <src> <home>}\n".utf8))
+    FileHandle.standardError.write(Data("usage: cc-fido {daemon|hook|write <path>|enroll|install|enroll-file <path> [mode]|enroll-dir <path>|status [--json]|_validate-policy <path>|_render-policy <src> <home>}\n".utf8))
     exit(2)
 }
 
@@ -92,6 +92,20 @@ case "_registry-add":
     } catch {
         FileHandle.standardError.write(Data("cc-fido: registry add failed: \(error)\n".utf8)); exit(1)
     }
+case "status":
+    let report = gatherStatus(platform: MacOSPlatform())
+    if args.contains("--json") {
+        let data = try JSONEncoder().encode(report)
+        print(String(data: data, encoding: .utf8)!)
+    } else {
+        func mark(_ b: Bool) -> String { b ? "✓" : "·" }
+        print("""
+        cc-fido status: \(report.rollup)
+          \(mark(report.account)) account   \(mark(report.dirs)) dirs   \(mark(report.binary)) binary
+          \(mark(report.policyValid)) policy   \(mark(report.keyEnrolled)) key   \(mark(report.daemonRunning)) daemon   \(mark(report.managedSettings)) managed-settings
+        """)
+    }
+    exit(0)
 case "enroll-file":
     guard args.count >= 2 else { usage() }
     let path = (args[1] as NSString).standardizingPath
