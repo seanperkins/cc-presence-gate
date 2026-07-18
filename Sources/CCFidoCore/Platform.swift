@@ -36,21 +36,26 @@ func run(_ path: String, _ args: [String]) -> (Int32, String, String) {
 public struct MacOSPlatform: Platform {
     public init() {}
     public func serviceAccountExists(name: String) -> Bool {
-        // Check for the UniqueID attribute specifically — a record missing it (e.g. left over from an
-        // interrupted create) is treated as absent, so it gets repaired rather than permanently skipped.
-        run("/usr/bin/dscl", [".", "-read", "/Users/\(name)", "UniqueID"]).0 == 0
+        // Check IsHidden — the LAST attribute `-create`d below — as a completion sentinel, not
+        // UniqueID. UniqueID is written early, so a half-formed record (interrupted create, has a
+        // UniqueID but no IsHidden yet) would otherwise read as "exists" and never get repaired.
+        // Checking the last-written attribute means "exists" only once every attribute is present.
+        // IsHidden MUST stay the last `-create` below or this sentinel is invalid.
+        run("/usr/bin/dscl", [".", "-read", "/Users/\(name)", "IsHidden"]).0 == 0
     }
     public func createServiceAccount(name: String) throws {
-        if serviceAccountExists(name: name) { return }               // idempotent
-        // Reuse an existing uid if a half-formed record is being repaired, so a repair never
-        // reassigns the uid out from under anything that may already reference it.
+        // Reached only when serviceAccountExists(name:) is false, i.e. the account is missing or
+        // incomplete (no IsHidden yet) — possibly a half-formed record from an interrupted prior
+        // run that DOES already have a UniqueID. Reuse that uid rather than reassigning, so a
+        // repair never orphans anything that may already reference the old uid; `dscl -create` is
+        // an idempotent overwrite, so re-running every attribute below on a partial record is safe.
         let existing = run("/usr/bin/dscl", [".", "-read", "/Users/\(name)", "UniqueID"])
         let uid: Int
         if existing.0 == 0,
-           let n = existing.1.split(separator: " ").last,
+           let n = existing.1.split(separator: ":").last,
            let existingUID = Int(n.trimmingCharacters(in: .whitespacesAndNewlines)) {
-            // `dscl -read` output is e.g. "UniqueID: 250\n" — the trailing token carries the
-            // newline, so it must be trimmed before Int(...) (which does not trim implicitly).
+            // `dscl -read` output is e.g. "UniqueID: 250\n" — split on ":" (not " ") so the
+            // value is robust to formatting, then trim before Int(...) (no implicit trim).
             uid = existingUID
         } else {
             // Pick a free uid in the 200-400 service range (mirrors account-setup.sh).
@@ -59,6 +64,8 @@ public struct MacOSPlatform: Platform {
             uid = (used.filter { $0 >= 200 && $0 < 400 }.max() ?? 299) + 1
         }
         do {
+            // IsHidden MUST remain the last entry — serviceAccountExists(name:) reads it as the
+            // completion sentinel.
             for arg in [["-create", "/Users/\(name)"],
                         ["-create", "/Users/\(name)", "UserShell", "/usr/bin/false"],
                         ["-create", "/Users/\(name)", "RealName", "cc-fido broker"],

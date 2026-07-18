@@ -21,7 +21,7 @@ public func installPrereqs(policySrc: String, home: String, binarySource: String
     // a repair re-run invoked as the installed binary) — removing it first would delete the copy
     // source out from under itself and the copy would then fail.
     let dest = Paths.code + "/cc-fido"
-    let sameFile = FileManager.default.fileExists(atPath: binarySource)
+    let sameFile = fm.fileExists(atPath: binarySource)
         && URL(fileURLWithPath: binarySource).resolvingSymlinksInPath().path
         == URL(fileURLWithPath: dest).resolvingSymlinksInPath().path
     if !sameFile {
