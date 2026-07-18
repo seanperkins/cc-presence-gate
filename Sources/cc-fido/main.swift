@@ -100,7 +100,7 @@ case "enroll":
     let home = realLoginHome()
     do { try runEnroll(home: home, keys: keys, enroller: FidoEnroller(),
                        blink: { fidoNegativeBlinkTest(handle: $0, namespace: $1) },
-                       signKeygen: fidoSignKeygen, handle: fidoKeyHandle(home: NSHomeDirectory()), namespace: fidoProfile.namespace,
+                       signKeygen: fidoSignKeygen, handle: fidoKeyHandle(home: home), namespace: fidoProfile.namespace,
                        profile: fidoProfile)
          print("cc-fido: enrolled. Next: sudo cc-fido activate"); exit(0) }
     catch { FileHandle.standardError.write(Data("cc-fido enroll failed: \(error)\n".utf8)); exit(1) }
