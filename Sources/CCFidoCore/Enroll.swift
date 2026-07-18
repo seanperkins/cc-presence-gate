@@ -27,8 +27,11 @@ public func runEnroll(home: String, keys: Int) throws {
                 .trimmingCharacters(in: .whitespacesAndNewlines), !pub.isEmpty else {
             throw EnrollError.failed("read pubkey #\(n)")
         }
-        // one escalation: append to the root-owned allowed_signers
-        if !runPrivileged(["/bin/sh", "-c", "printf 'gate-principal %s\\n' '\(pub)' >> \(Paths.allowedSigners)"]) {
+        // one escalation: append to the root-owned allowed_signers. The script body is FIXED
+        // (only Paths.allowedSigners, our own constant, is interpolated into it); `pub` is passed
+        // as a positional parameter ($1) instead of being interpolated into the script text, so
+        // it can't break out of the shell no matter its shape.
+        if !runPrivileged(["/bin/sh", "-c", "printf 'gate-principal %s\\n' \"$1\" >> \(Paths.allowedSigners)", "sh", pub]) {
             throw EnrollError.failed("register key #\(n)")
         }
     }

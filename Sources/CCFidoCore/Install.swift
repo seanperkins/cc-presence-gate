@@ -24,17 +24,16 @@ public func installPrereqs(policySrc: String, home: String, binarySource: String
     for d in [Paths.code, Paths.keydir, Paths.runDir] {
         try fm.createDirectory(atPath: d, withIntermediateDirectories: true)
     }
-    // binary + codesign. Skip the remove+copy when binarySource already IS the destination (e.g.
-    // a repair re-run invoked as the installed binary) — removing it first would delete the copy
-    // source out from under itself and the copy would then fail.
+    // binary + codesign. Stage to `dest + ".new"` then atomically rename over `dest` — never
+    // remove the live binary before its replacement is fully copied. This also handles the
+    // repair-re-run case (binarySource == dest) safely: the source is untouched until the copy
+    // completes, so a bare/relative binarySource (or a same-file source) can never leave `dest`
+    // deleted with no replacement.
     let dest = Paths.code + "/cc-fido"
-    let sameFile = fm.fileExists(atPath: binarySource)
-        && URL(fileURLWithPath: binarySource).resolvingSymlinksInPath().path
-        == URL(fileURLWithPath: dest).resolvingSymlinksInPath().path
-    if !sameFile {
-        try? fm.removeItem(atPath: dest)
-        try fm.copyItem(atPath: binarySource, toPath: dest)
-    }
+    let stagedBinary = dest + ".new"
+    try? fm.removeItem(atPath: stagedBinary)
+    try fm.copyItem(atPath: binarySource, toPath: stagedBinary)
+    try fm.moveItem(atPath: stagedBinary, toPath: dest)   // atomic replace
     if run("/usr/bin/codesign", ["--force", "--options", "runtime", "--sign", "-", dest]).0 != 0 {
         throw InstallError.failed("codesign")
     }

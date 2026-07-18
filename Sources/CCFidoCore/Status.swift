@@ -42,14 +42,21 @@ public struct StatusReport: Codable {
     }
 }
 
-public func gatherStatus(platform: Platform) -> StatusReport {
+/// `home` is the LOGIN user's home (see `realLoginHome()` in main.swift), passed in rather than
+/// derived from `Paths.handle`/`NSHomeDirectory()` because `status` is unprivileged and may run
+/// under `sudo` (where `NSHomeDirectory()` would resolve to root's home, not the login user's).
+public func gatherStatus(platform: Platform, home: String) -> StatusReport {
     let fm = FileManager.default
     let account = platform.serviceAccountExists(name: "_ccfido")
     let dirs = fm.fileExists(atPath: Paths.keydir) && fm.fileExists(atPath: Paths.runDir)
     let binary = fm.fileExists(atPath: Paths.code + "/cc-fido")
     let policyValid = (try? Policy.fromFile(Paths.policy)) != nil
-    let keyEnrolled = fm.fileExists(atPath: Paths.allowedSigners)
-        && ((try? String(contentsOfFile: Paths.allowedSigners, encoding: .utf8))?.isEmpty == false)
+    // Privilege-independent probe: `allowed_signers` is root/_ccfido-owned 0600 inside /var/ccfido
+    // (mode 0700), unreadable to the login user `status` runs as. Instead check for the enroll
+    // handle (`runEnroll` in Enroll.swift symlinks it) in the login user's OWN home, which they
+    // can always read. This means `key_enrolled` now signals "this login user has completed
+    // enrollment," not "allowed_signers is non-empty."
+    let keyEnrolled = fm.fileExists(atPath: home + "/.ccfido/gate_sk")
     let daemonRunning = platform.daemonState().running
     let managed = fm.fileExists(atPath: Paths.managedSettings)
     return StatusReport(account: account, dirs: dirs, binary: binary, policyValid: policyValid,

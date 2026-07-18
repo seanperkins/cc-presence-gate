@@ -35,4 +35,21 @@ final class StatusTests: XCTestCase {
         XCTAssertEqual(obj["rollup"] as? String, "active")
         XCTAssertEqual(obj["daemon_running"] as? Bool, true)
     }
+    // gatherStatus must probe the login user's OWN enrollment handle (readable without privilege),
+    // not allowed_signers (root/_ccfido-owned, unreadable to `status` running as the login user).
+    func testGatherStatusKeyEnrolledWhenHandlePresent() throws {
+        let home = "/tmp/cc-fido-status-test-\(UUID().uuidString)"
+        try FileManager.default.createDirectory(atPath: home + "/.ccfido", withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(atPath: home) }
+        FileManager.default.createFile(atPath: home + "/.ccfido/gate_sk", contents: Data("stub".utf8))
+        let report = gatherStatus(platform: MockPlatform(), home: home)
+        XCTAssertTrue(report.keyEnrolled)
+    }
+    func testGatherStatusKeyNotEnrolledWhenHandleAbsent() throws {
+        let home = "/tmp/cc-fido-status-test-\(UUID().uuidString)"
+        try FileManager.default.createDirectory(atPath: home, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(atPath: home) }
+        let report = gatherStatus(platform: MockPlatform(), home: home)
+        XCTAssertFalse(report.keyEnrolled)
+    }
 }

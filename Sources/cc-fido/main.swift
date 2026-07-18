@@ -80,7 +80,7 @@ case "uninstall":
     let uninstallHome = realLoginHome()
     do {
         try uninstall(platform: MacOSPlatform(), enrolledTargets: targets, home: uninstallHome)
-        let r = gatherStatus(platform: MacOSPlatform())
+        let r = gatherStatus(platform: MacOSPlatform(), home: uninstallHome)
         print("cc-fido: uninstalled — status now \(r.rollup)"); exit(0)
     } catch { FileHandle.standardError.write(Data("cc-fido uninstall failed: \(error)\n".utf8)); exit(1) }
 case "enroll":
@@ -142,7 +142,7 @@ case "_registry-add":
         FileHandle.standardError.write(Data("cc-fido: registry add failed: \(error)\n".utf8)); exit(1)
     }
 case "status":
-    let report = gatherStatus(platform: MacOSPlatform())
+    let report = gatherStatus(platform: MacOSPlatform(), home: realLoginHome())
     if args.contains("--json") {
         let data = try JSONEncoder().encode(report)
         print(String(data: data, encoding: .utf8)!)
