@@ -3,9 +3,16 @@ import CCFidoCore
 
 let args = Array(CommandLine.arguments.dropFirst())
 func usage() -> Never {
-    FileHandle.standardError.write(Data("usage: cc-fido {daemon|hook|write <path>|enroll|install|enroll-file <path> [mode]|enroll-dir <path>|status [--json]|_validate-policy <path>|_render-policy <src> <home>}\n".utf8))
+    FileHandle.standardError.write(Data("usage: cc-fido {daemon|hook|write <path>|enroll|install [--policy PATH]|enroll-file <path> [mode]|enroll-dir <path>|status [--json]|_validate-policy <path>|_render-policy <src> <home>}\n".utf8))
     exit(2)
 }
+
+// Under `sudo`, HOME is root's; the policy's __HOME__ must be the LOGIN user's home. Derive from SUDO_USER.
+func realLoginHome() -> String {
+    if let u = ProcessInfo.processInfo.environment["SUDO_USER"], let pw = getpwnam(u) { return String(cString: pw.pointee.pw_dir) }
+    return NSHomeDirectory()
+}
+func installRepoPolicyDefault() -> String { Paths.code + "/policy.json.template" }  // see Task 7 note
 
 func ccfidoUIDOr(_ fallback: Int) -> Int { getpwnam("_ccfido").map { Int($0.pointee.pw_uid) } ?? fallback }
 func warnAncestors(_ path: String) {
@@ -39,6 +46,17 @@ case "hook":
 case "write":
     guard args.count >= 2 else { usage() }
     exit(runWrite(path: args[1], content: FileHandle.standardInput.readDataToEndOfFile()))
+case "install":
+    guard getuid() == 0 else {
+        FileHandle.standardError.write(Data("cc-fido install: must run as root — use: sudo cc-fido install\n".utf8)); exit(1)
+    }
+    let policySrc = args.firstIndex(of: "--policy").map { args[$0 + 1] } ?? (installRepoPolicyDefault())
+    let home = realLoginHome()   // login user's home (from SUDO_USER), NOT root's /var/root
+    do {
+        try installPrereqs(policySrc: policySrc, home: home, binarySource: CommandLine.arguments[0], platform: MacOSPlatform())
+        print("cc-fido: prereqs installed. Next: cc-fido enroll  (then: sudo cc-fido activate)")
+        exit(0)
+    } catch { FileHandle.standardError.write(Data("cc-fido install failed: \(error)\n".utf8)); exit(1) }
 case "_render-plist": print(renderPlist()); exit(0)
 case "_render-managed": print(renderManagedSettings(hookCmd: Paths.code + "/cc-fido hook")); exit(0)
 case "_cc-version":   // record the Claude Code version for the install-time re-probe

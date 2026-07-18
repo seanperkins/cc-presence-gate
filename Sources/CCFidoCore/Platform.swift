@@ -36,23 +36,40 @@ func run(_ path: String, _ args: [String]) -> (Int32, String, String) {
 public struct MacOSPlatform: Platform {
     public init() {}
     public func serviceAccountExists(name: String) -> Bool {
-        run("/usr/bin/dscl", [".", "-read", "/Users/\(name)"]).0 == 0
+        // Check for the UniqueID attribute specifically — a record missing it (e.g. left over from an
+        // interrupted create) is treated as absent, so it gets repaired rather than permanently skipped.
+        run("/usr/bin/dscl", [".", "-read", "/Users/\(name)", "UniqueID"]).0 == 0
     }
     public func createServiceAccount(name: String) throws {
         if serviceAccountExists(name: name) { return }               // idempotent
-        // Pick a free uid in the 200-400 service range (mirrors account-setup.sh).
-        let list = run("/usr/bin/dscl", [".", "-list", "/Users", "UniqueID"]).1
-        let used = list.split(separator: "\n").compactMap { Int($0.split(whereSeparator: { $0 == " " }).last ?? "") }
-        let uid = (used.filter { $0 >= 200 && $0 < 400 }.max() ?? 299) + 1
-        for arg in [["-create", "/Users/\(name)"],
-                    ["-create", "/Users/\(name)", "UserShell", "/usr/bin/false"],
-                    ["-create", "/Users/\(name)", "RealName", "cc-fido broker"],
-                    ["-create", "/Users/\(name)", "UniqueID", String(uid)],
-                    ["-create", "/Users/\(name)", "PrimaryGroupID", "20"],
-                    ["-create", "/Users/\(name)", "NFSHomeDirectory", "/var/empty"],
-                    ["-create", "/Users/\(name)", "IsHidden", "1"]] {
-            let r = run("/usr/bin/dscl", ["."] + arg)
-            if r.0 != 0 { throw PlatformError.failed("dscl \(arg): \(r.2)") }
+        // Reuse an existing uid if a half-formed record is being repaired, so a repair never
+        // reassigns the uid out from under anything that may already reference it.
+        let existing = run("/usr/bin/dscl", [".", "-read", "/Users/\(name)", "UniqueID"])
+        let uid: Int
+        if existing.0 == 0, let n = existing.1.split(separator: " ").last, let existingUID = Int(n) {
+            uid = existingUID
+        } else {
+            // Pick a free uid in the 200-400 service range (mirrors account-setup.sh).
+            let list = run("/usr/bin/dscl", [".", "-list", "/Users", "UniqueID"]).1
+            let used = list.split(separator: "\n").compactMap { Int($0.split(whereSeparator: { $0 == " " }).last ?? "") }
+            uid = (used.filter { $0 >= 200 && $0 < 400 }.max() ?? 299) + 1
+        }
+        do {
+            for arg in [["-create", "/Users/\(name)"],
+                        ["-create", "/Users/\(name)", "UserShell", "/usr/bin/false"],
+                        ["-create", "/Users/\(name)", "RealName", "cc-fido broker"],
+                        ["-create", "/Users/\(name)", "UniqueID", String(uid)],
+                        ["-create", "/Users/\(name)", "PrimaryGroupID", "20"],
+                        ["-create", "/Users/\(name)", "NFSHomeDirectory", "/var/empty"],
+                        ["-create", "/Users/\(name)", "IsHidden", "1"]] {
+                let r = run("/usr/bin/dscl", ["."] + arg)
+                if r.0 != 0 { throw PlatformError.failed("dscl \(arg): \(r.2)") }
+            }
+        } catch {
+            // Best-effort cleanup so a failed create doesn't wedge a half-formed record that the
+            // existence check would otherwise skip repairing forever.
+            _ = run("/usr/bin/dscl", [".", "-delete", "/Users/\(name)"])
+            throw error
         }
     }
     public func deleteServiceAccount(name: String) throws {
