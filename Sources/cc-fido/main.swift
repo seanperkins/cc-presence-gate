@@ -88,14 +88,14 @@ case "uninstall":
     let targets = registry.files + registry.dirs
     let uninstallHome = realLoginHome()
     do {
-        try uninstall(platform: MacOSPlatform(), enrolledTargets: targets, home: uninstallHome)
-        let r = gatherStatus(platform: MacOSPlatform(), home: uninstallHome)
+        try uninstall(platform: MacOSPlatform(), enrolledTargets: targets, home: uninstallHome, enroller: FidoEnroller())
+        let r = gatherStatus(platform: MacOSPlatform(), home: uninstallHome, enroller: FidoEnroller())
         print("cc-fido: uninstalled — status now \(r.rollup)"); exit(0)
     } catch { FileHandle.standardError.write(Data("cc-fido uninstall failed: \(error)\n".utf8)); exit(1) }
 case "enroll":
     if getuid() == 0 { FileHandle.standardError.write(Data("cc-fido enroll: run as your login user (not sudo) — it needs your key + a touch\n".utf8)); exit(1) }
     let keys = flagValue("--keys", in: args).flatMap { Int($0) } ?? 1
-    do { try runEnroll(home: NSHomeDirectory(), keys: keys,
+    do { try runEnroll(home: NSHomeDirectory(), keys: keys, enroller: FidoEnroller(),
                        blink: { fidoNegativeBlinkTest(handle: $0, namespace: $1) })
          print("cc-fido: enrolled. Next: sudo cc-fido activate"); exit(0) }
     catch { FileHandle.standardError.write(Data("cc-fido enroll failed: \(error)\n".utf8)); exit(1) }
@@ -153,7 +153,7 @@ case "_registry-add":
         FileHandle.standardError.write(Data("cc-fido: registry add failed: \(error)\n".utf8)); exit(1)
     }
 case "status":
-    let report = gatherStatus(platform: MacOSPlatform(), home: realLoginHome())
+    let report = gatherStatus(platform: MacOSPlatform(), home: realLoginHome(), enroller: FidoEnroller())
     if args.contains("--json") {
         let data = try JSONEncoder().encode(report)
         print(String(data: data, encoding: .utf8)!)

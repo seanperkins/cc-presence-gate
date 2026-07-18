@@ -24,12 +24,15 @@ final class InstallTests: XCTestCase {
 
     func testUninstallUnlocksTargetsThenTearsDown() throws {
         let p = MockPlatform(); p.accountExists = true; p.daemon = (true, true, 9)
-        try uninstall(platform: p, enrolledTargets: ["/Users/Shared/x.txt"], home: "/Users/x")
+        let enroller = MockEnroller()
+        try uninstall(platform: p, enrolledTargets: ["/Users/Shared/x.txt"], home: "/Users/x", enroller: enroller)
         XCTAssertTrue(p.calls.contains("nouchg(/Users/Shared/x.txt)"))  // unlocked before deletion
         XCTAssertTrue(p.calls.contains("bootoutDaemon"))
         XCTAssertTrue(p.calls.contains("removeManaged"))
         XCTAssertTrue(p.calls.contains("deleteAccount(_ccfido)"))
         // unlock must precede account deletion
         XCTAssertLessThan(p.calls.firstIndex(of: "nouchg(/Users/Shared/x.txt)")!, p.calls.firstIndex(of: "deleteAccount(_ccfido)")!)
+        // key material cleanup delegated to the Enroller seam
+        XCTAssertEqual(enroller.removedHome, "/Users/x")
     }
 }

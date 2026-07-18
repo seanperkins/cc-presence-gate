@@ -90,7 +90,7 @@ public func installPrereqs(policySrc: String, home: String, binarySource: String
 /// The root check (this needs privileged ops for real) lives in the CLI dispatch, not here — mirrors
 /// installOrchestration (unit-tested, no guard) vs installPrereqs (root-only, guarded): keeps this the
 /// pure, [SW]-testable half so `swift test` (which never runs as root) can exercise it directly.
-public func uninstall(platform: Platform, enrolledTargets: [String], home: String) throws {
+public func uninstall(platform: Platform, enrolledTargets: [String], home: String, enroller: Enroller) throws {
     try? platform.bootoutDaemon()
     try? platform.removeManagedSettings()
     try? FileManager.default.removeItem(atPath: Paths.plist)
@@ -101,9 +101,7 @@ public func uninstall(platform: Platform, enrolledTargets: [String], home: Strin
     for d in [Paths.code, Paths.keydir, Paths.runDir] { try? FileManager.default.removeItem(atPath: d) }
     try? platform.deleteServiceAccount(name: "_ccfido")
     // key material (login user's home)
-    for f in ["gate_sk", "gate_sk.pub", "gate_sk1", "gate_sk1.pub", "gate_sk2", "gate_sk2.pub"] {
-        try? FileManager.default.removeItem(atPath: "\(home)/.ccfido/\(f)")
-    }
+    enroller.removeKeyMaterial(home: home)
 }
 func loginOwner(home: String) -> String {
     let user = (home as NSString).lastPathComponent

@@ -2,24 +2,19 @@ import Foundation
 
 public enum EnrollError: Error { case failed(String) }
 
-/// The `ssh-keygen -t ed25519-sk` argv per key (touch required). Pure/testable.
-public func enrollPlan(home: String, keys: Int) -> [[String]] {
-    (1...max(1, keys)).map { n in
-        ["-t", "ed25519-sk", "-O", "application=ssh:cc-fido-gate", "-N", "", "-C", "cc-fido-key\(n)",
-         "-f", "\(home)/.ccfido/gate_sk\(n)"]
-    }
-}
-
 /// Runs as the LOGIN user. Generates key(s) (touch), registers pubkeys in allowed_signers (one escalation),
 /// symlinks the handle (private+public), and blink-tests key #1. `blink` is injected — the FIDO-specific
-/// negative-blink-test lives in CCFidoBackend, which core cannot import.
-public func runEnroll(home: String, keys: Int, blink: (_ handle: String, _ namespace: String) -> Bool) throws {
+/// negative-blink-test lives in CCFidoBackend, which core cannot import. `enroller` supplies the
+/// per-key keygen argv and the enrolled-probe/cleanup — backend-specific, injected so core stays FIDO-agnostic.
+public func runEnroll(home: String, keys: Int, enroller: Enroller, blink: (_ handle: String, _ namespace: String) -> Bool) throws {
     let dir = "\(home)/.ccfido"
     try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
     _ = run("/bin/chmod", ["700", dir])
     let count = max(1, keys)
-    for (i, argv) in enrollPlan(home: home, keys: keys).enumerated() {
-        let n = i + 1
+    for n in 1...count {
+        guard let argv = enroller.enrollPlan(home: home, index: n).first else {
+            throw EnrollError.failed("no enroll plan for key #\(n)")
+        }
         FileHandle.standardError.write(Data(">>> TOUCH to enroll key #\(n) of \(count) <<<\n".utf8))
         if run(Paths.signKeygen, argv).0 != 0 { throw EnrollError.failed("ssh-keygen key #\(n)") }
         _ = run("/bin/chmod", ["600", "\(dir)/gate_sk\(n)"])

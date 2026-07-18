@@ -20,6 +20,16 @@ final class MockPlatform: Platform {
     func clearImmutable(_ path: String) throws { calls.append("nouchg(\(path))") }
 }
 
+// An Enroller double: backend-agnostic stand-in so core tests (gatherStatus/uninstall/runEnroll)
+// don't need CCFidoBackend, which CCGateCoreTests doesn't depend on.
+final class MockEnroller: Enroller {
+    var enrolled = false
+    var removedHome: String?
+    func enrollPlan(home: String, index: Int) -> [[String]] { [["mock-keygen", "-f", "\(home)/.ccfido/gate_sk\(index)"]] }
+    func isEnrolled(home: String) -> Bool { enrolled }
+    func removeKeyMaterial(home: String) { removedHome = home }
+}
+
 final class PlatformTests: XCTestCase {
     func testMockRecordsAccountLifecycle() throws {
         let p = MockPlatform()

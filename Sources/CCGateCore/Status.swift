@@ -45,7 +45,7 @@ public struct StatusReport: Codable {
 /// `home` is the LOGIN user's home (see `realLoginHome()` in main.swift), passed in rather than
 /// derived from `Paths.handle`/`NSHomeDirectory()` because `status` is unprivileged and may run
 /// under `sudo` (where `NSHomeDirectory()` would resolve to root's home, not the login user's).
-public func gatherStatus(platform: Platform, home: String) -> StatusReport {
+public func gatherStatus(platform: Platform, home: String, enroller: Enroller) -> StatusReport {
     let fm = FileManager.default
     let account = platform.serviceAccountExists(name: "_ccfido")
     let dirs = fm.fileExists(atPath: Paths.keydir) && fm.fileExists(atPath: Paths.runDir)
@@ -56,7 +56,7 @@ public func gatherStatus(platform: Platform, home: String) -> StatusReport {
     // handle (`runEnroll` in Enroll.swift symlinks it) in the login user's OWN home, which they
     // can always read. This means `key_enrolled` now signals "this login user has completed
     // enrollment," not "allowed_signers is non-empty."
-    let keyEnrolled = fm.fileExists(atPath: home + "/.ccfido/gate_sk")
+    let keyEnrolled = enroller.isEnrolled(home: home)
     let daemonRunning = platform.daemonState().running
     let managed = fm.fileExists(atPath: Paths.managedSettings)
     return StatusReport(account: account, dirs: dirs, binary: binary, policyValid: policyValid,
