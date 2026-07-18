@@ -7,18 +7,18 @@ import Darwin
 /// The physical touch remains the real gate — the daemon still verifies a challenge-bound signature; this is
 /// pure client UX. Rendering is passed as an AppleScript argv item, never interpolated into -e.
 func confirmAndSign(_ humanRendering: String, challenge: Data,
-                    handlePath: String = Paths.handle, namespace: String = Paths.namespace) -> Data? {
+                    signer: Signer, displayName: String = "cc-fido-gate") -> Data? {
     let dlg = Process(); dlg.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
     dlg.arguments = ["-l", "AppleScript",
         "-e", "on run argv",
-        "-e", "display dialog (item 1 of argv) buttons {\"Cancel\", \"Approve\"} default button \"Approve\" with title \"cc-fido-gate\" giving up after 60",
+        "-e", "display dialog (item 1 of argv) buttons {\"Cancel\", \"Approve\"} default button \"Approve\" with title \"\(displayName)\" giving up after 60",
         "-e", "end run",
         humanRendering]
     dlg.environment = scrubbedEnv()
     let dOut = Pipe(); dlg.standardOutput = dOut; dlg.standardError = FileHandle.nullDevice
     do { try dlg.run() } catch { return nil }   // no dialog → deny (fail-safe)
 
-    let canceller = SignCanceller()
+    let canceller = signer.makeCanceller()
     let lock = NSLock()
     var sig: Data? = nil
     var done = false                 // first resolver (touch OR button) wins
@@ -27,7 +27,7 @@ func confirmAndSign(_ humanRendering: String, challenge: Data,
     // Signer: arm the key immediately; a touch resolves it. On success, dismiss the still-open dialog.
     group.enter()
     DispatchQueue.global().async {
-        let s = try? sign(challenge: challenge, handlePath: handlePath, namespace: namespace, canceller: canceller)
+        let s = try? signer.sign(challenge: challenge, canceller: canceller)
         lock.lock()
         if let s = s, !done { sig = s; done = true; if dlg.isRunning { dlg.terminate() } }
         lock.unlock()
@@ -66,7 +66,7 @@ func connectSock(_ path: String) -> Int32 {
     return rc == 0 ? s : -1
 }
 
-public func runWrite(path: String, content: Data, sockPath: String = Paths.sock) -> Int32 {
+public func runWrite(path: String, content: Data, signer: Signer, sockPath: String = Paths.sock) -> Int32 {
     let fd = connectSock(sockPath)
     guard fd >= 0 else { FileHandle.standardError.write(Data("cc-fido: broker unreachable\n".utf8)); return 1 }
     defer { close(fd) }
@@ -79,7 +79,7 @@ public func runWrite(path: String, content: Data, sockPath: String = Paths.sock)
             let reason = (msg["reason"] as? String) ?? "protocol error"
             FileHandle.standardError.write(Data("cc-fido: \(reason)\n".utf8)); return 1
         }
-        guard let sig = confirmAndSign(human, challenge: challenge) else {
+        guard let sig = confirmAndSign(human, challenge: challenge, signer: signer) else {
             try sendMsg(fd, ["phase": "abort", "reason": "denied"]); return 1
         }
         try sendMsg(fd, ["phase": "signature", "signature_b64": sig.base64EncodedString()])
@@ -89,7 +89,7 @@ public func runWrite(path: String, content: Data, sockPath: String = Paths.sock)
     } catch { return 1 }
 }
 
-public func runApprove(tool: String, toolInput: [String: Any], cwd: String, sockPath: String = Paths.sock) -> Bool {
+public func runApprove(tool: String, toolInput: [String: Any], cwd: String, signer: Signer, sockPath: String = Paths.sock) -> Bool {
     let fd = connectSock(sockPath); guard fd >= 0 else { return false }
     defer { close(fd) }
     do {
@@ -97,7 +97,7 @@ public func runApprove(tool: String, toolInput: [String: Any], cwd: String, sock
         let msg = try recvMsg(fd)
         guard let human = msg["human_rendering"] as? String, let chB64 = msg["challenge_b64"] as? String,
               let challenge = Data(base64Encoded: chB64) else { return false }
-        guard let sig = confirmAndSign(human, challenge: challenge) else {
+        guard let sig = confirmAndSign(human, challenge: challenge, signer: signer) else {
             try sendMsg(fd, ["phase": "abort", "reason": "denied"]); return false
         }
         try sendMsg(fd, ["phase": "signature", "signature_b64": sig.base64EncodedString()])

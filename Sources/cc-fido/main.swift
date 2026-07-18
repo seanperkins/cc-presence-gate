@@ -1,5 +1,14 @@
 import Foundation
 import CCGateCore
+import CCFidoBackend
+
+func fidoSigner() -> FidoSigner {
+    FidoSigner(keygen: Paths.signKeygen, handlePath: Paths.handle, namespace: Paths.namespace)
+}
+func fidoVerifier() -> FidoVerifier {
+    FidoVerifier(keygen: Paths.verifyKeygen, allowedSigners: Paths.allowedSigners,
+                 principal: Paths.principal, namespace: Paths.namespace, keydir: Paths.keydir)
+}
 
 let args = Array(CommandLine.arguments.dropFirst())
 func usage() -> Never {
@@ -40,12 +49,12 @@ func rollbackFileLock(_ path: String, toUID uid: UInt32, toMode mode: mode_t) {
 guard let cmd = args.first else { usage() }
 switch cmd {
 case "daemon":
-    try Broker().serve()
+    try Broker(verifier: fidoVerifier()).serve()
 case "hook":
-    hookMain()
+    hookMain(signer: fidoSigner())
 case "write":
     guard args.count >= 2 else { usage() }
-    exit(runWrite(path: args[1], content: FileHandle.standardInput.readDataToEndOfFile()))
+    exit(runWrite(path: args[1], content: FileHandle.standardInput.readDataToEndOfFile(), signer: fidoSigner()))
 case "install":
     guard getuid() == 0 else {
         FileHandle.standardError.write(Data("cc-fido install: must run as root — use: sudo cc-fido install\n".utf8)); exit(1)
@@ -86,7 +95,9 @@ case "uninstall":
 case "enroll":
     if getuid() == 0 { FileHandle.standardError.write(Data("cc-fido enroll: run as your login user (not sudo) — it needs your key + a touch\n".utf8)); exit(1) }
     let keys = flagValue("--keys", in: args).flatMap { Int($0) } ?? 1
-    do { try runEnroll(home: NSHomeDirectory(), keys: keys); print("cc-fido: enrolled. Next: sudo cc-fido activate"); exit(0) }
+    do { try runEnroll(home: NSHomeDirectory(), keys: keys,
+                       blink: { fidoNegativeBlinkTest(handle: $0, namespace: $1) })
+         print("cc-fido: enrolled. Next: sudo cc-fido activate"); exit(0) }
     catch { FileHandle.standardError.write(Data("cc-fido enroll failed: \(error)\n".utf8)); exit(1) }
 case "_render-plist": print(renderPlist()); exit(0)
 case "_render-managed": print(renderManagedSettings(hookCmd: Paths.code + "/cc-fido hook")); exit(0)
@@ -95,7 +106,7 @@ case "_cc-version":   // record the Claude Code version for the install-time re-
     print(ccVersion(args[1])); exit(0)
 case "_blink-test":
     guard args.count >= 2 else { usage() }
-    exit(negativeBlinkTest(handle: args[1], namespace: Paths.namespace) ? 0 : 1)
+    exit(fidoNegativeBlinkTest(handle: args[1], namespace: Paths.namespace) ? 0 : 1)
 case "_verify-audit":   // runs AS _ccfido so it can read the 0600 _ccfido-owned audit log
     if auditVerifyChain() { print("audit chain OK"); exit(0) }
     FileHandle.standardError.write(Data("audit chain BROKEN\n".utf8)); exit(1)

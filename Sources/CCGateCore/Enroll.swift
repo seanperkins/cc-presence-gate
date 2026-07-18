@@ -11,8 +11,9 @@ public func enrollPlan(home: String, keys: Int) -> [[String]] {
 }
 
 /// Runs as the LOGIN user. Generates key(s) (touch), registers pubkeys in allowed_signers (one escalation),
-/// symlinks the handle (private+public), and blink-tests key #1.
-public func runEnroll(home: String, keys: Int) throws {
+/// symlinks the handle (private+public), and blink-tests key #1. `blink` is injected — the FIDO-specific
+/// negative-blink-test lives in CCFidoBackend, which core cannot import.
+public func runEnroll(home: String, keys: Int, blink: (_ handle: String, _ namespace: String) -> Bool) throws {
     let dir = "\(home)/.ccfido"
     try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
     _ = run("/bin/chmod", ["700", dir])
@@ -40,7 +41,7 @@ public func runEnroll(home: String, keys: Int) throws {
     _ = run("/bin/ln", ["-sf", "\(dir)/gate_sk1.pub", Paths.handle + ".pub"])
     _ = runPrivileged(["/usr/sbin/chown", "_ccfido", Paths.allowedSigners])
     _ = runPrivileged(["/bin/chmod", "600", Paths.allowedSigners])
-    if !negativeBlinkTest(handle: "\(dir)/gate_sk1", namespace: Paths.namespace) {
+    if !blink("\(dir)/gate_sk1", Paths.namespace) {
         throw EnrollError.failed("blink-test (touch-required not verified)")
     }
 }

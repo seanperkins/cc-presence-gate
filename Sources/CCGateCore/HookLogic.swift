@@ -25,7 +25,7 @@ public func decideAndEmit(event: [String: Any], policy: Policy, out: FileHandle,
         err.write(Data("cc-fido: touch not provided — denied\n".utf8)); return 2
     }
 }
-public func hookMain() -> Never {
+public func hookMain(signer: Signer) -> Never {
     let data = FileHandle.standardInput.readDataToEndOfFile()
     guard let event = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
         FileHandle.standardError.write(Data("cc-fido: unreadable payload — failing closed\n".utf8)); exit(2)
@@ -34,5 +34,5 @@ public func hookMain() -> Never {
         FileHandle.standardError.write(Data("cc-fido: no policy — failing closed\n".utf8)); exit(2)
     }
     exit(decideAndEmit(event: event, policy: policy, out: FileHandle.standardOutput,
-                       err: FileHandle.standardError) { t, i, c in runApprove(tool: t, toolInput: i, cwd: c) })
+                       err: FileHandle.standardError) { t, i, c in runApprove(tool: t, toolInput: i, cwd: c, signer: signer) })
 }

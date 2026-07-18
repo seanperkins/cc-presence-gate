@@ -6,8 +6,9 @@ public enum BrokerError: Error { case writeFailed(String) }
 public final class Broker {
     let sockPath: String
     let allowedSigners: String
-    public init(sockPath: String = Paths.sock, allowedSigners: String = Paths.allowedSigners) {
-        self.sockPath = sockPath; self.allowedSigners = allowedSigners
+    let verifier: Verifier
+    public init(sockPath: String = Paths.sock, allowedSigners: String = Paths.allowedSigners, verifier: Verifier) {
+        self.sockPath = sockPath; self.allowedSigners = allowedSigners; self.verifier = verifier
     }
 
     // --- authorization helpers (pure, [SW]-tested) ---
@@ -128,8 +129,7 @@ public final class Broker {
         // the WYSIWYS ceremony — consistent shape on both approve_ok and deny. (Task-3 review Important.)
         guard reply["phase"] as? String == "signature",
               let sigB64 = reply["signature_b64"] as? String, let sig = Data(base64Encoded: sigB64),
-              verify(challenge: challenge, signature: sig, allowedSigners: allowedSigners,
-                     principal: Paths.principal, namespace: Paths.namespace) else {
+              verifier.verify(challenge: challenge, signature: sig) else {
             try auditAppend(["event": "deny", "op": "approve", "tool": doc.path,
                              "content_sha256": doc.contentSha256, "caller": caller])
             try sendMsg(fd, ["phase": "result", "status": "deny", "reason": "no valid touch"]); return
@@ -162,8 +162,7 @@ public final class Broker {
         let reply = try recvMsg(fd)
         guard reply["phase"] as? String == "signature",
               let sigB64 = reply["signature_b64"] as? String, let sig = Data(base64Encoded: sigB64),
-              verify(challenge: challenge, signature: sig, allowedSigners: allowedSigners,
-                     principal: Paths.principal, namespace: Paths.namespace) else {
+              verifier.verify(challenge: challenge, signature: sig) else {
             try auditAppend(["event": "deny", "path": norm, "caller": caller])
             try sendMsg(fd, ["phase": "result", "status": "deny", "reason": "no valid touch"]); return
         }
