@@ -1,6 +1,6 @@
 import XCTest
 import Foundation
-@testable import CCFidoCore
+@testable import CCGateCore
 
 final class CLIHelperTests: XCTestCase {
     func testRenderPlist() {

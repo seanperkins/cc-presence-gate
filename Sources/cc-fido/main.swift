@@ -1,5 +1,5 @@
 import Foundation
-import CCFidoCore
+import CCGateCore
 
 let args = Array(CommandLine.arguments.dropFirst())
 func usage() -> Never {

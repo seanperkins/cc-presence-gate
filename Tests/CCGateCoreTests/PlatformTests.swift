@@ -1,5 +1,5 @@
 import XCTest
-@testable import CCFidoCore
+@testable import CCGateCore
 
 // A Platform double that records the OS ops the orchestration requests, so install/activate/uninstall
 // logic can be unit-tested without touching the real system.

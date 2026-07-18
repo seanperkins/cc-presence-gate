@@ -1,5 +1,5 @@
 import XCTest
-@testable import CCFidoCore
+@testable import CCGateCore
 
 final class PolicyTests: XCTestCase {
     let p = Policy(sensitiveGlobs: ["**/.env*", "**/.ssh/*", "**/id_*"], allowTier: ["/Users/sean/proj/**"],

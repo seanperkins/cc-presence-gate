@@ -1,5 +1,5 @@
 import XCTest
-@testable import CCFidoCore
+@testable import CCGateCore
 
 final class WysiwysTests: XCTestCase {
     private func doc(_ path: String, _ content: Data) -> SignedDocument {

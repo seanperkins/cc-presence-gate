@@ -1,5 +1,5 @@
 import XCTest
-@testable import CCFidoCore
+@testable import CCGateCore
 
 final class BrokerAllowlistTests: XCTestCase {
     func testControlPathsAlwaysDenied() {

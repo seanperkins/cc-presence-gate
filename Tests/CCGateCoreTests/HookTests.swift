@@ -1,6 +1,6 @@
 import XCTest
 import Foundation
-@testable import CCFidoCore
+@testable import CCGateCore
 
 final class HookTests: XCTestCase {
     let pol = try! Policy(sensitiveGlobs: ["**/.env*"], allowTier: ["/Users/sean/proj/**"],

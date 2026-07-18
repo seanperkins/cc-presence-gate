@@ -1,6 +1,6 @@
 import XCTest
 import Darwin
-@testable import CCFidoCore
+@testable import CCGateCore
 
 final class WireTests: XCTestCase {
     private func pair() -> (Int32, Int32) {

@@ -1,5 +1,5 @@
 import XCTest
-@testable import CCFidoCore
+@testable import CCGateCore
 
 final class AuditTests: XCTestCase {
     private func tmp() -> String { NSTemporaryDirectory() + "audit-\(UUID().uuidString).log" }
