@@ -2,13 +2,7 @@ import Foundation
 import CCGateCore
 import CCFidoBackend
 
-func fidoSigner() -> FidoSigner {
-    FidoSigner(keygen: Paths.signKeygen, handlePath: Paths.handle, namespace: Paths.namespace)
-}
-func fidoVerifier() -> FidoVerifier {
-    FidoVerifier(keygen: Paths.verifyKeygen, allowedSigners: Paths.allowedSigners,
-                 principal: Paths.principal, namespace: Paths.namespace, keydir: Paths.keydir)
-}
+let fidoCtx = makeFidoContext(home: NSHomeDirectory())
 
 let args = Array(CommandLine.arguments.dropFirst())
 func usage() -> Never {
@@ -49,12 +43,12 @@ func rollbackFileLock(_ path: String, toUID uid: UInt32, toMode mode: mode_t) {
 guard let cmd = args.first else { usage() }
 switch cmd {
 case "daemon":
-    try Broker(verifier: fidoVerifier()).serve()
+    try Broker(verifier: fidoCtx.verifier).serve()
 case "hook":
-    hookMain(signer: fidoSigner())
+    hookMain(signer: fidoCtx.signer)
 case "write":
     guard args.count >= 2 else { usage() }
-    exit(runWrite(path: args[1], content: FileHandle.standardInput.readDataToEndOfFile(), signer: fidoSigner()))
+    exit(runWrite(path: args[1], content: FileHandle.standardInput.readDataToEndOfFile(), signer: fidoCtx.signer))
 case "install":
     guard getuid() == 0 else {
         FileHandle.standardError.write(Data("cc-fido install: must run as root — use: sudo cc-fido install\n".utf8)); exit(1)
