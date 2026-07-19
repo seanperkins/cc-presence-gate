@@ -1,0 +1,1 @@
+{ "name": "cc-fido", "description": "Require a physical FIDO security-key touch before high-risk Claude Code tool calls.", "version": "0.1.0" }

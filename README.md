@@ -56,6 +56,14 @@ feasibility spike** (chiefly: does Claude Code deny a tool whose hook is killed/
   `ssh-keygen` has no FIDO provider). *Verification* works with stock `ssh-keygen`.
 - Claude Code
 
+## Install
+Guided (recommended): run the `/cc-fido:install` skill and follow the prompts.
+Manual:
+1. `sudo cc-fido install --policy plugins/cc-fido/install/policy.json`   # prereqs + policy
+2. `cc-fido enroll`                                        # generate + register your key (touch)
+3. `sudo cc-fido activate`                                 # start the daemon
+Check state any time: `cc-fido status`. Remove everything: `sudo cc-fido uninstall`.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

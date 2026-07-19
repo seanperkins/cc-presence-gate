@@ -43,6 +43,12 @@ NotebookEdit (M3), plus the per-task review fixes already committed. The below s
 - **Task4 — `custody.json` read-modify-write is not locked.** Concurrent `enroll-*` could drop an
   entry (last-writer-wins on the whole file). Low risk: enrollment is serial admin. Fix: flock the
   registry file across the RMW.
+- **Task6 review — directory-enrolled targets: uninstall vs. broker write-authorization scope
+  mismatch.** `uninstall` unlocks registered dir paths (`registry.dirs`) via `clearImmutable`, but
+  the broker's write-authorization (`Broker.loadRegistry()`) is files-only, exact-path match.
+  Whether files written *inside* a registered dir end up individually `uchg`-locked in a way
+  `clearImmutable(dirPath)` wouldn't reach is a pre-existing broker-architecture question, not
+  addressed by the guided-install work.
 
 ## Operational (hardware-verified 2026-07-17)
 - **launchd broker needs a `kickstart` if a stale socket is present.** After prior *manual* daemon runs
@@ -86,3 +92,42 @@ NotebookEdit (M3), plus the per-task review fixes already committed. The below s
 - **task6_hook.sh set -e fragility (Minor, latent).** Under `set -eu -o pipefail`, a non-zero
   `claude -p` would abort before the `[ -f "$D/.env" ] && … || echo note` reporting line. In practice
   `claude -p` returns 0 even on a hook denial, so latent; it's a USER-RUN test harness.
+- **Task7 — `task7_install.sh`/`task7_enroll.sh`/`task7_teardown.sh` retired**, replaced by the
+  `cc-fido install`/`enroll`/`activate`/`uninstall` subcommands (and the `/cc-fido:install` guided
+  skill). `task7_accept.sh` is retained as the deep USER-RUN acceptance test.
+
+## Guided install (2026-07-18 branch — tracked from per-task + whole-branch review)
+All ship-as-tracked; the whole-branch review verdict was **Ready to merge: Yes**. The live
+`sudo cc-fido install → enroll → activate → uninstall` (sudo + a real touch) remains **USER-RUN** —
+not yet exercised on hardware; drive it via the `/cc-fido:install` skill.
+- **`status`'s `key_enrolled` now means "login user completed enrollment" (handle present), not
+  "allowed_signers non-empty."** `gatherStatus` probes the login user's `~/.ccfido/gate_sk` handle
+  (via `realLoginHome()`) because `status` runs unprivileged and can't read the `_ccfido`-owned 0600
+  `allowed_signers` inside 0700 `/var/ccfido`. The handle is created *after* the registration succeeds,
+  so it's a valid enrollment-complete sentinel; the security-critical `activate` gate still reads
+  `allowed_signers` as root independently. If the handle and the trust store ever diverge (manual
+  tampering), `status` could report `enrolled` without a registered signer — `activate` would still
+  refuse. Consider a `sudo -u _ccfido test -s allowed_signers` cross-check if that matters.
+- **`status` `policy_valid` = schema-valid only (`Policy.fromFile`), not `lint()`.** A policy with a
+  blanket `allow_tier` grant reports `policy_valid:true` though `lint()` calls it fatal. `install`
+  still lint-gates before writing, so a bad policy never installs via `cc-fido install`; this only
+  affects the `status` display of an externally-planted policy.
+- **`status` `degraded` rollup is a catch-all** binning semantically different partial states (e.g.
+  account-only vs daemon-up-but-prereq-broken). The skill diagnoses from the raw JSON fields, so the
+  rollup label is advisory.
+- **`gatherStatus` FS-wiring only partially unit-tested.** The `key_enrolled`-from-`home` probe now has
+  tests; `dirs`/`binary`/`policy_valid` read absolute system `Paths` and can't be exercised under
+  `swift test` without path injection.
+- **`activate` reachability probe is a fixed 1s `usleep`** then a socket check — a slow launchd
+  bootstrap yields a false "NOT reachable (re-run activate)"; re-running is safe/idempotent. `activate`
+  also shares `exit(1)` between key-refusal and activated-but-not-yet-reachable (the stderr message
+  distinguishes them).
+- **`install` — fail-closed `_ccfido` chown right after `dscl` account-create** can abort if
+  opendirectoryd hasn't propagated the new account name yet; self-heals on an idempotent re-run.
+- **`enroll` — `chmod 700`/`600` return values discarded** (best-effort hardening; `ssh-keygen`
+  already writes the private key `0600`).
+- **`uninstall` — `loginOwner` hardcodes group `:staff`** vs the retired shell's `id -gn`. Correct for
+  a standard macOS account (primary group `staff`, gid 20); wrong for a non-standard primary group.
+- **`/cc-fido:install` skill — the default-policy scope note is loosely worded** ("gates sensitive/home
+  paths"): the default `allow_tier` is `__HOME__/**` (most of `$HOME` passes without a touch); only
+  `sensitive_globs` (dotfiles/credentials/LaunchAgents) and non-home writes gate.
