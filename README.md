@@ -64,6 +64,22 @@ Manual:
 3. `sudo cc-fido activate`                                 # start the daemon
 Check state any time: `cc-fido status`. Remove everything: `sudo cc-fido uninstall`.
 
+## Touch ID gate (`cc-touch-id`)
+
+An alternative gate that swaps the hardware security key for your Mac's built-in Touch ID sensor
+(Secure Enclave key, no external key required). Same hook/broker architecture as `cc-fido`, same
+custody guarantees — the presence ceremony is a Touch ID sheet instead of a key blink.
+
+Guided install: run the `/cc-touch-id:install` skill. Unlike `cc-fido`, it has a real prerequisite:
+Secure Enclave key access needs a **provisioned, Developer-ID-signed and notarized `.app` bundle**,
+not just a signed CLI binary — `packaging/build-signed.sh` builds it, but that step needs a Developer
+ID Application certificate for team `HH3SJBAS42` and a stored `notarytool` credential; the skill's
+Step 0 preflights for both and offers a machine-local dev-signed fallback if they're absent.
+
+**cc-fido and cc-touch-id do not coexist yet.** Both write the same managed-settings hook file;
+installing one replaces the other's gate. Pick one per machine until a future coexistence pass
+(deferred "Pillar C" in the design doc) lands.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

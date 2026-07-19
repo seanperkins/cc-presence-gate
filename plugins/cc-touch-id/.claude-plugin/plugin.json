@@ -1,0 +1,1 @@
+{ "name": "cc-touch-id", "description": "Require a Touch ID (Secure Enclave) presence check before high-risk Claude Code tool calls.", "version": "0.1.0" }

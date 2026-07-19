@@ -1,0 +1,704 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		00EAC5594BD68EC97847502F /* TouchIdVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A0F6F31F35EB1E276134AA2 /* TouchIdVerifier.swift */; };
+		066ED28C2B5674A8871446E6 /* SecureEnclave.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBBCC35AB48B20759E31214E /* SecureEnclave.swift */; };
+		08C4E81F4089D1743D2EACEB /* Platform.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4761623D9D761E9D7F1FF80 /* Platform.swift */; };
+		0AFCD4DDA495C4ABB8A6DE6E /* Policy.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE120FA272D7E2555A84B534 /* Policy.swift */; };
+		0C4ABAB58017D97DB84685C0 /* Signer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F0C3F2710FBE2D2D63F01DE /* Signer.swift */; };
+		0DE036C9C5F1E59BE16B4E58 /* Audit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1458A7142C0E544C222D783B /* Audit.swift */; };
+		17A112EEF1AFC393F6F647F3 /* GateProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = C08B3AF56908FABD2E2E485A /* GateProfile.swift */; };
+		186E263376DFD6D62D429B47 /* Custody.swift in Sources */ = {isa = PBXBuildFile; fileRef = 448EDB2FBED7886F7F1AA9EF /* Custody.swift */; };
+		2711CC3A5C93EA8665DF9269 /* Enroll.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6D41760EEE6F64F65480473 /* Enroll.swift */; };
+		2CA6034150D3CC6FE3D490BC /* TouchIdProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B14AD5BAE3936712D75A1AD /* TouchIdProfile.swift */; };
+		2E7E953DA3A55433989F501E /* Install.swift in Sources */ = {isa = PBXBuildFile; fileRef = A54516AD7BC28105F142A5D3 /* Install.swift */; };
+		4D731AE0B82D74D3E681F5AA /* TouchIdEnroller.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB09887E75854820BB2FD283 /* TouchIdEnroller.swift */; };
+		51EF4705B49A7F4475ABA871 /* Client.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A10DD475FC85F8E7ACDDDBA /* Client.swift */; };
+		5D4C486E9C3AA0058E807966 /* GateContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9979870AD0B06A8133F5FB /* GateContext.swift */; };
+		7AC8A521D3E395F6B38C7AFA /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31AC603D2F94EE971BC04D19 /* main.swift */; };
+		7D891E88FC11234B3EC6892B /* Canonical.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D15EB38DBFD819C599CB876 /* Canonical.swift */; };
+		7EF022DED4BC2D9CFBDFB12B /* Status.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02B984C54CD05E8E21A5BDF8 /* Status.swift */; };
+		A144CED40C9B383ED1692B97 /* TouchIdConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB6360BB24116D772DAB2D4C /* TouchIdConstants.swift */; };
+		A88C626F8A41DF27D3866736 /* libCCGateCore.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C7E45D9D5FBE2F76EEF01A65 /* libCCGateCore.a */; };
+		A96D79F26165670B08A97B6E /* TouchIdCeremony.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1D4AA6707BBA920512AE94D /* TouchIdCeremony.swift */; };
+		AA0553C72F6596ACE64E97EB /* Broker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FCF78FCFFFD9F5EA5D24C26 /* Broker.swift */; };
+		C02A1EF897E3EE0763C54F8E /* Enroller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07168D7C6CD21303010AB4CE /* Enroller.swift */; };
+		C7D1BC59CA5D769603D78DFC /* HookLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90EEF0137F331DA66890AB53 /* HookLogic.swift */; };
+		D61AD1D8D5D744C840AA32AF /* Wire.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90080C7CB781EE88F47B4C97 /* Wire.swift */; };
+		E2C68FB937898D5E005FE983 /* GateCeremony.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0303FBB9BA51940B2D6F0CD1 /* GateCeremony.swift */; };
+		E9F2EF1173352C7E8F16914E /* CLIHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = E45B601D8006EDF7DF2001FB /* CLIHelpers.swift */; };
+		F240193B989E980F30CCC2FF /* CeremonyCanceller.swift in Sources */ = {isa = PBXBuildFile; fileRef = D81006EE04C0FB36C4654F6E /* CeremonyCanceller.swift */; };
+		F9ECFA7C34ABDC3A30F2A51D /* libCCTouchIDBackend.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 75D94774C60BA80C23B7384B /* libCCTouchIDBackend.a */; };
+		FC6FB2119D83C475504D773B /* Verifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9087347154C43EADD5D6EF97 /* Verifier.swift */; };
+		FE143A0EE17B8D98A88D9328 /* Crypto.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6B2ED3B424470AC42A46F94 /* Crypto.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		15E00079518D87F535DDE998 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7B7DBA41BC4C097F312B8466 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5096D447833FC7C6EDAB920F;
+			remoteInfo = CCGateCore;
+		};
+		4045FCD93731D056C90713E8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7B7DBA41BC4C097F312B8466 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5096D447833FC7C6EDAB920F;
+			remoteInfo = CCGateCore;
+		};
+		E0345A869772EF7FEACA3CB8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7B7DBA41BC4C097F312B8466 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9DB386FC1D6225CE4F08881C;
+			remoteInfo = CCTouchIDBackend;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		02B984C54CD05E8E21A5BDF8 /* Status.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Status.swift; sourceTree = "<group>"; };
+		0303FBB9BA51940B2D6F0CD1 /* GateCeremony.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GateCeremony.swift; sourceTree = "<group>"; };
+		07168D7C6CD21303010AB4CE /* Enroller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Enroller.swift; sourceTree = "<group>"; };
+		0FCF78FCFFFD9F5EA5D24C26 /* Broker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Broker.swift; sourceTree = "<group>"; };
+		1458A7142C0E544C222D783B /* Audit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Audit.swift; sourceTree = "<group>"; };
+		1B14AD5BAE3936712D75A1AD /* TouchIdProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchIdProfile.swift; sourceTree = "<group>"; };
+		31AC603D2F94EE971BC04D19 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		3F0C3F2710FBE2D2D63F01DE /* Signer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Signer.swift; sourceTree = "<group>"; };
+		448EDB2FBED7886F7F1AA9EF /* Custody.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Custody.swift; sourceTree = "<group>"; };
+		5D15EB38DBFD819C599CB876 /* Canonical.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Canonical.swift; sourceTree = "<group>"; };
+		6A0F6F31F35EB1E276134AA2 /* TouchIdVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchIdVerifier.swift; sourceTree = "<group>"; };
+		75D94774C60BA80C23B7384B /* libCCTouchIDBackend.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libCCTouchIDBackend.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A10DD475FC85F8E7ACDDDBA /* Client.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Client.swift; sourceTree = "<group>"; };
+		90080C7CB781EE88F47B4C97 /* Wire.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Wire.swift; sourceTree = "<group>"; };
+		9087347154C43EADD5D6EF97 /* Verifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Verifier.swift; sourceTree = "<group>"; };
+		90EEF0137F331DA66890AB53 /* HookLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HookLogic.swift; sourceTree = "<group>"; };
+		A54516AD7BC28105F142A5D3 /* Install.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Install.swift; sourceTree = "<group>"; };
+		AA9979870AD0B06A8133F5FB /* GateContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GateContext.swift; sourceTree = "<group>"; };
+		C08B3AF56908FABD2E2E485A /* GateProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GateProfile.swift; sourceTree = "<group>"; };
+		C6D41760EEE6F64F65480473 /* Enroll.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Enroll.swift; sourceTree = "<group>"; };
+		C7E45D9D5FBE2F76EEF01A65 /* libCCGateCore.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libCCGateCore.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		CE120FA272D7E2555A84B534 /* Policy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Policy.swift; sourceTree = "<group>"; };
+		D81006EE04C0FB36C4654F6E /* CeremonyCanceller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CeremonyCanceller.swift; sourceTree = "<group>"; };
+		DE2F9994BCD91D45C2D41DFC /* cc-touch-id.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "cc-touch-id.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		E1D4AA6707BBA920512AE94D /* TouchIdCeremony.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchIdCeremony.swift; sourceTree = "<group>"; };
+		E45B601D8006EDF7DF2001FB /* CLIHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIHelpers.swift; sourceTree = "<group>"; };
+		EB09887E75854820BB2FD283 /* TouchIdEnroller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchIdEnroller.swift; sourceTree = "<group>"; };
+		EB6360BB24116D772DAB2D4C /* TouchIdConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchIdConstants.swift; sourceTree = "<group>"; };
+		EBBCC35AB48B20759E31214E /* SecureEnclave.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureEnclave.swift; sourceTree = "<group>"; };
+		F4761623D9D761E9D7F1FF80 /* Platform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Platform.swift; sourceTree = "<group>"; };
+		F6B2ED3B424470AC42A46F94 /* Crypto.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Crypto.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		B8766BE297104CBFC99F6E44 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A88C626F8A41DF27D3866736 /* libCCGateCore.a in Frameworks */,
+				F9ECFA7C34ABDC3A30F2A51D /* libCCTouchIDBackend.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0150938B2D9C2F3D7FFE7265 /* CCGateCore */ = {
+			isa = PBXGroup;
+			children = (
+				1458A7142C0E544C222D783B /* Audit.swift */,
+				0FCF78FCFFFD9F5EA5D24C26 /* Broker.swift */,
+				5D15EB38DBFD819C599CB876 /* Canonical.swift */,
+				8A10DD475FC85F8E7ACDDDBA /* Client.swift */,
+				E45B601D8006EDF7DF2001FB /* CLIHelpers.swift */,
+				F6B2ED3B424470AC42A46F94 /* Crypto.swift */,
+				448EDB2FBED7886F7F1AA9EF /* Custody.swift */,
+				C6D41760EEE6F64F65480473 /* Enroll.swift */,
+				AA9979870AD0B06A8133F5FB /* GateContext.swift */,
+				90EEF0137F331DA66890AB53 /* HookLogic.swift */,
+				A54516AD7BC28105F142A5D3 /* Install.swift */,
+				F4761623D9D761E9D7F1FF80 /* Platform.swift */,
+				CE120FA272D7E2555A84B534 /* Policy.swift */,
+				02B984C54CD05E8E21A5BDF8 /* Status.swift */,
+				90080C7CB781EE88F47B4C97 /* Wire.swift */,
+				B7FF3C86D747F3F970DCA096 /* .claude */,
+				43336498E081258C36813988 /* Profile */,
+				E66520580B61E545F732CC23 /* Signing */,
+			);
+			path = CCGateCore;
+			sourceTree = "<group>";
+		};
+		07A3CBDACD64350FC38F0B37 = {
+			isa = PBXGroup;
+			children = (
+				E9C462DB41F603D2216955A7 /* cc-fido-gate */,
+				0C998052F844185D1F658687 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		0C998052F844185D1F658687 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				DE2F9994BCD91D45C2D41DFC /* cc-touch-id.app */,
+				C7E45D9D5FBE2F76EEF01A65 /* libCCGateCore.a */,
+				75D94774C60BA80C23B7384B /* libCCTouchIDBackend.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		43336498E081258C36813988 /* Profile */ = {
+			isa = PBXGroup;
+			children = (
+				C08B3AF56908FABD2E2E485A /* GateProfile.swift */,
+			);
+			path = Profile;
+			sourceTree = "<group>";
+		};
+		50A50DC90585858F4EBED232 /* CCTouchIDBackend */ = {
+			isa = PBXGroup;
+			children = (
+				EBBCC35AB48B20759E31214E /* SecureEnclave.swift */,
+				E1D4AA6707BBA920512AE94D /* TouchIdCeremony.swift */,
+				EB6360BB24116D772DAB2D4C /* TouchIdConstants.swift */,
+				EB09887E75854820BB2FD283 /* TouchIdEnroller.swift */,
+				1B14AD5BAE3936712D75A1AD /* TouchIdProfile.swift */,
+				6A0F6F31F35EB1E276134AA2 /* TouchIdVerifier.swift */,
+			);
+			path = CCTouchIDBackend;
+			sourceTree = "<group>";
+		};
+		6D81D5D4436D3BDF48F7F349 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				B09DA8112FAE1D16ECBAC7AF /* cc-touch-id */,
+				0150938B2D9C2F3D7FFE7265 /* CCGateCore */,
+				50A50DC90585858F4EBED232 /* CCTouchIDBackend */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		B09DA8112FAE1D16ECBAC7AF /* cc-touch-id */ = {
+			isa = PBXGroup;
+			children = (
+				31AC603D2F94EE971BC04D19 /* main.swift */,
+			);
+			path = "cc-touch-id";
+			sourceTree = "<group>";
+		};
+		B7FF3C86D747F3F970DCA096 /* .claude */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = .claude;
+			sourceTree = "<group>";
+		};
+		E66520580B61E545F732CC23 /* Signing */ = {
+			isa = PBXGroup;
+			children = (
+				D81006EE04C0FB36C4654F6E /* CeremonyCanceller.swift */,
+				07168D7C6CD21303010AB4CE /* Enroller.swift */,
+				0303FBB9BA51940B2D6F0CD1 /* GateCeremony.swift */,
+				3F0C3F2710FBE2D2D63F01DE /* Signer.swift */,
+				9087347154C43EADD5D6EF97 /* Verifier.swift */,
+			);
+			path = Signing;
+			sourceTree = "<group>";
+		};
+		E9C462DB41F603D2216955A7 /* cc-fido-gate */ = {
+			isa = PBXGroup;
+			children = (
+				6D81D5D4436D3BDF48F7F349 /* Sources */,
+			);
+			name = "cc-fido-gate";
+			path = ..;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		41B5057A6F3F6A3AC6203AD0 /* cc-touch-id */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A6FC72E79BC44EA425A9359B /* Build configuration list for PBXNativeTarget "cc-touch-id" */;
+			buildPhases = (
+				9312FCD248F62A67019A05CD /* Sources */,
+				B8766BE297104CBFC99F6E44 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				FD354C6FB74B45761B34F007 /* PBXTargetDependency */,
+				CE9185A2ABDB709CEAD7582E /* PBXTargetDependency */,
+			);
+			name = "cc-touch-id";
+			packageProductDependencies = (
+			);
+			productName = "cc-touch-id";
+			productReference = DE2F9994BCD91D45C2D41DFC /* cc-touch-id.app */;
+			productType = "com.apple.product-type.application";
+		};
+		5096D447833FC7C6EDAB920F /* CCGateCore */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 61246F6542C4086918B372BD /* Build configuration list for PBXNativeTarget "CCGateCore" */;
+			buildPhases = (
+				1C4D84E9B21DBF0B10EDDF36 /* Sources */,
+				11D9DAFB4B17BD0EB9EEE9E3 /* Copy Swift Objective-C Interface Header */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CCGateCore;
+			packageProductDependencies = (
+			);
+			productName = CCGateCore;
+			productReference = C7E45D9D5FBE2F76EEF01A65 /* libCCGateCore.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+		9DB386FC1D6225CE4F08881C /* CCTouchIDBackend */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 44F075FA2447C525E4D154F3 /* Build configuration list for PBXNativeTarget "CCTouchIDBackend" */;
+			buildPhases = (
+				BA99439A870CE354619C289D /* Sources */,
+				CC3A0D95A8B85F4F7BBB728A /* Copy Swift Objective-C Interface Header */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				2D93C70AED3E49C6C7264742 /* PBXTargetDependency */,
+			);
+			name = CCTouchIDBackend;
+			packageProductDependencies = (
+			);
+			productName = CCTouchIDBackend;
+			productReference = 75D94774C60BA80C23B7384B /* libCCTouchIDBackend.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		7B7DBA41BC4C097F312B8466 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					41B5057A6F3F6A3AC6203AD0 = {
+						DevelopmentTeam = HH3SJBAS42;
+						ProvisioningStyle = Automatic;
+					};
+					5096D447833FC7C6EDAB920F = {
+						DevelopmentTeam = HH3SJBAS42;
+						ProvisioningStyle = Automatic;
+					};
+					9DB386FC1D6225CE4F08881C = {
+						DevelopmentTeam = HH3SJBAS42;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 2CAD144E2CA00953AE8C3921 /* Build configuration list for PBXProject "CCTouchIDGate" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 07A3CBDACD64350FC38F0B37;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 0C998052F844185D1F658687 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				5096D447833FC7C6EDAB920F /* CCGateCore */,
+				9DB386FC1D6225CE4F08881C /* CCTouchIDBackend */,
+				41B5057A6F3F6A3AC6203AD0 /* cc-touch-id */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		11D9DAFB4B17BD0EB9EEE9E3 /* Copy Swift Objective-C Interface Header */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(DERIVED_SOURCES_DIR)/$(SWIFT_OBJC_INTERFACE_HEADER_NAME)",
+			);
+			name = "Copy Swift Objective-C Interface Header";
+			outputPaths = (
+				"$(BUILT_PRODUCTS_DIR)/include/$(PRODUCT_MODULE_NAME)/$(SWIFT_OBJC_INTERFACE_HEADER_NAME)",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "ditto \"${SCRIPT_INPUT_FILE_0}\" \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+		};
+		CC3A0D95A8B85F4F7BBB728A /* Copy Swift Objective-C Interface Header */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(DERIVED_SOURCES_DIR)/$(SWIFT_OBJC_INTERFACE_HEADER_NAME)",
+			);
+			name = "Copy Swift Objective-C Interface Header";
+			outputPaths = (
+				"$(BUILT_PRODUCTS_DIR)/include/$(PRODUCT_MODULE_NAME)/$(SWIFT_OBJC_INTERFACE_HEADER_NAME)",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "ditto \"${SCRIPT_INPUT_FILE_0}\" \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		1C4D84E9B21DBF0B10EDDF36 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0DE036C9C5F1E59BE16B4E58 /* Audit.swift in Sources */,
+				AA0553C72F6596ACE64E97EB /* Broker.swift in Sources */,
+				E9F2EF1173352C7E8F16914E /* CLIHelpers.swift in Sources */,
+				7D891E88FC11234B3EC6892B /* Canonical.swift in Sources */,
+				F240193B989E980F30CCC2FF /* CeremonyCanceller.swift in Sources */,
+				51EF4705B49A7F4475ABA871 /* Client.swift in Sources */,
+				FE143A0EE17B8D98A88D9328 /* Crypto.swift in Sources */,
+				186E263376DFD6D62D429B47 /* Custody.swift in Sources */,
+				2711CC3A5C93EA8665DF9269 /* Enroll.swift in Sources */,
+				C02A1EF897E3EE0763C54F8E /* Enroller.swift in Sources */,
+				E2C68FB937898D5E005FE983 /* GateCeremony.swift in Sources */,
+				5D4C486E9C3AA0058E807966 /* GateContext.swift in Sources */,
+				17A112EEF1AFC393F6F647F3 /* GateProfile.swift in Sources */,
+				C7D1BC59CA5D769603D78DFC /* HookLogic.swift in Sources */,
+				2E7E953DA3A55433989F501E /* Install.swift in Sources */,
+				08C4E81F4089D1743D2EACEB /* Platform.swift in Sources */,
+				0AFCD4DDA495C4ABB8A6DE6E /* Policy.swift in Sources */,
+				0C4ABAB58017D97DB84685C0 /* Signer.swift in Sources */,
+				7EF022DED4BC2D9CFBDFB12B /* Status.swift in Sources */,
+				FC6FB2119D83C475504D773B /* Verifier.swift in Sources */,
+				D61AD1D8D5D744C840AA32AF /* Wire.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9312FCD248F62A67019A05CD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7AC8A521D3E395F6B38C7AFA /* main.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BA99439A870CE354619C289D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				066ED28C2B5674A8871446E6 /* SecureEnclave.swift in Sources */,
+				A96D79F26165670B08A97B6E /* TouchIdCeremony.swift in Sources */,
+				A144CED40C9B383ED1692B97 /* TouchIdConstants.swift in Sources */,
+				4D731AE0B82D74D3E681F5AA /* TouchIdEnroller.swift in Sources */,
+				2CA6034150D3CC6FE3D490BC /* TouchIdProfile.swift in Sources */,
+				00EAC5594BD68EC97847502F /* TouchIdVerifier.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		2D93C70AED3E49C6C7264742 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5096D447833FC7C6EDAB920F /* CCGateCore */;
+			targetProxy = 4045FCD93731D056C90713E8 /* PBXContainerItemProxy */;
+		};
+		CE9185A2ABDB709CEAD7582E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9DB386FC1D6225CE4F08881C /* CCTouchIDBackend */;
+			targetProxy = E0345A869772EF7FEACA3CB8 /* PBXContainerItemProxy */;
+		};
+		FD354C6FB74B45761B34F007 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5096D447833FC7C6EDAB920F /* CCGateCore */;
+			targetProxy = 15E00079518D87F535DDE998 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		1183A609442A8FD9D7ED04CB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = HH3SJBAS42;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		11D53C4F8A8630FD667A535E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mobilitylabs.cctouchid.CCGateCore;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+		3A9347C4F58558BFFE95055F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mobilitylabs.cctouchid.CCGateCore;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
+		3F72B5EEDB5069A1C608BCD0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mobilitylabs.cctouchid.CCTouchIDBackend;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
+		75349484E440AF88EAE466B3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = CCTouchID.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_LSUIElement = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mobilitylabs.cctouchid.app;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		794541D4336D6719F81B9530 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mobilitylabs.cctouchid.CCTouchIDBackend;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+		8ED03D37D5ED943E968554F0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = HH3SJBAS42;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		E0A50B0B31BB6C90AC04E4B9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = CCTouchID.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_LSUIElement = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mobilitylabs.cctouchid.app;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		2CAD144E2CA00953AE8C3921 /* Build configuration list for PBXProject "CCTouchIDGate" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1183A609442A8FD9D7ED04CB /* Debug */,
+				8ED03D37D5ED943E968554F0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		44F075FA2447C525E4D154F3 /* Build configuration list for PBXNativeTarget "CCTouchIDBackend" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				794541D4336D6719F81B9530 /* Debug */,
+				3F72B5EEDB5069A1C608BCD0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		61246F6542C4086918B372BD /* Build configuration list for PBXNativeTarget "CCGateCore" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				11D53C4F8A8630FD667A535E /* Debug */,
+				3A9347C4F58558BFFE95055F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A6FC72E79BC44EA425A9359B /* Build configuration list for PBXNativeTarget "cc-touch-id" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				75349484E440AF88EAE466B3 /* Debug */,
+				E0A50B0B31BB6C90AC04E4B9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 7B7DBA41BC4C097F312B8466 /* Project object */;
+}

@@ -1,2 +1,5 @@
 { "name": "cc-presence-gate", "owner": { "name": "Sean Perkins" },
-  "plugins": [ { "name": "cc-fido", "source": "./plugins/cc-fido" } ] }
+  "plugins": [
+    { "name": "cc-fido", "source": "./plugins/cc-fido" },
+    { "name": "cc-touch-id", "source": "./plugins/cc-touch-id" }
+  ] }

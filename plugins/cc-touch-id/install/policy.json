@@ -1,0 +1,36 @@
+{
+  "sensitive_globs": [
+    "**/.env*",
+    "**/*.pem",
+    "**/credentials*",
+    "**/.ssh/*",
+    "**/.zshrc",
+    "**/.zprofile",
+    "**/.zshenv",
+    "**/.bashrc",
+    "**/.bash_profile",
+    "**/.profile",
+    "**/Library/LaunchAgents/*",
+    "**/Library/LaunchDaemons/*",
+    "**/.gitconfig",
+    "**/.config/git/*",
+    "**/.git/hooks/*",
+    "**/.claude/settings*.json",
+    "**/.claude/CLAUDE.md",
+    "**/.claude/hooks/*"
+  ],
+  "allow_tier": [
+    "__HOME__/**"
+  ],
+  "locked_paths": [],
+  "bash_advisory": [
+    "git push .*(--force|-f)\\b",
+    "rm -rf .*",
+    "deploy",
+    "kubectl delete .*"
+  ],
+  "mcp_allow": [
+    ["gh", "list_prs"],
+    ["gh", "get_issue"]
+  ]
+}

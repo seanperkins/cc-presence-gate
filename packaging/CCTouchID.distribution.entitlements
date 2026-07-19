@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Developer-ID DISTRIBUTION re-sign entitlements (packaging/build-signed.sh Step c).
+     keychain-access-groups uses the LITERAL team-prefixed form, not $(AppIdentifierPrefix) — that
+     substitution is only performed by Xcode's build system, never by a bare `codesign` invocation, so
+     a Developer-ID re-sign that used the Xcode-flavored token would embed the literal, unexpanded
+     string "$(AppIdentifierPrefix)com.mobilitylabs.cctouchid.app" and the Secure Enclave keychain
+     item would be unreachable at runtime.
+     NO com.apple.security.get-task-allow key (TID-5): distribution builds must not be debuggable via
+     same-uid task_for_pid/lldb attach. build-signed.sh greps the re-signed binary's entitlements and
+     fails the build if get-task-allow is present, so this file is the single source of truth for the
+     shipped keychain-access-group and the absence of get-task-allow together. -->
+<plist version="1.0">
+<dict>
+	<key>keychain-access-groups</key>
+	<array>
+		<string>HH3SJBAS42.com.mobilitylabs.cctouchid.app</string>
+	</array>
+</dict>
+</plist>
