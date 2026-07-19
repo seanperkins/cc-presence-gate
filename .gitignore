@@ -3,6 +3,10 @@ dist/
 .build/
 *.log
 .DS_Store
+
+# Xcode derived data / build output for the packaging project
+packaging/.dd/
+*.xcarchive
 .env
 .env.*
 

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Developer-ID export options for cc-touch-id.app (packaging/build-distribution.sh).
+     `method: developer-id` makes xcodebuild -exportArchive:
+       - sign with the Developer ID Application cert,
+       - create/embed a Developer ID (MAC_APP_DIRECT) provisioning profile that authorizes
+         the keychain-access-groups (Keychain Sharing) entitlement — the access group the
+         persistent Secure Enclave key needs (a bare Developer ID sig fails: SecKeyCreateRandomKey
+         -34018 errSecMissingEntitlement, confirmed on macOS 26),
+       - STRIP com.apple.security.get-task-allow (TID-5: not same-uid debuggable),
+     without the Development-profile forced get-task-allow. Pair with -allowProvisioningUpdates
+     so Xcode can enable Keychain Sharing on the App ID + mint the profile automatically. -->
+<plist version="1.0">
+<dict>
+	<key>method</key>
+	<string>developer-id</string>
+	<key>teamID</key>
+	<string>HH3SJBAS42</string>
+	<key>signingStyle</key>
+	<string>automatic</string>
+	<key>destination</key>
+	<string>export</string>
+</dict>
+</plist>

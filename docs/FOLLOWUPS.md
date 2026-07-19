@@ -150,23 +150,23 @@ not yet exercised on hardware; drive it via the `/cc-fido:install` skill.
   profile-aware (e.g. a `hookBinaryPath` field on `GateProfile`, defaulting to
   `codeDir/binaryName` for `cc-fido` and to `touchIdAppBinary` for `cc-touch-id`) so the `install`
   subcommand alone is correct without the install.sh workaround.
-- **Developer-ID *distribution* is blocked on a provisioning profile for `keychain-access-groups`
-  (author-machine build ships instead).** The SE key needs the `keychain-access-groups` entitlement,
-  and macOS requires that entitlement be authorized by an embedded PROVISIONING PROFILE — it cannot be
-  self-asserted in a bare Developer ID signature (an entitled binary with no authorizing profile is
-  amfid-killed at launch, SIGKILL/137 — confirmed empirically). The only macOS profile available is the
-  **Development** wildcard profile, which mandates `com.apple.security.get-task-allow`. So the shipped
-  `packaging/build-signed.sh` produces an **author-machine** build: Xcode automatic signing (Developer
-  ID cert + Development profile + get-task-allow + keychain group) — it launches and can create/use the
-  SE key on the signing Mac, but is NOT notarized and runs only on Macs registered to team HH3SJBAS42.
-  Stripping `get-task-allow` / Developer-ID re-signing without a matching profile breaks it (SIGKILL).
-  **To ship true notarized distribution** (runs on any Mac, `get-task-allow` absent, TID-5 attach
-  resistance intact): create a **Developer ID provisioning profile** that authorizes
-  `keychain-access-groups` for App ID `com.seanperkins.cc-touch-id` (Apple Developer portal; may need a
-  support request — Developer-ID profiles for keychain sharing are not self-serve for all accounts),
-  embed it, sign with Developer ID (no get-task-allow), then notarize + staple. `packaging/
-  CCTouchID.distribution.entitlements` (literal team-prefixed group, no get-task-allow) is retained for
-  that future path.
+- **Developer-ID notarized *distribution* — RESOLVED (2026-07-19).** `packaging/build-distribution.sh`
+  now produces a notarized, stapled, Gatekeeper-clean `cc-touch-id.app` that runs on any Mac with
+  `get-task-allow` absent (TID-5 intact). The blocker was real: a persistent Secure-Enclave key is a
+  data-protection-keychain item that MUST land in an authorized keychain access group, and a bare
+  Developer ID signature has none — asserting `keychain-access-groups` with no profile → amfid SIGKILL
+  at launch (rc 137); asserting nothing → app launches but `SecKeyCreateRandomKey` → -34018
+  `errSecMissingEntitlement`. Both confirmed empirically on macOS 26. **The fix:** a *Developer ID*
+  provisioning profile grants `application-identifier` (= `HH3SJBAS42.com.seanperkins.cc-touch-id`),
+  which is exactly the access group the SE key needs, and — unlike the Development profile — does NOT
+  force `get-task-allow`. Xcode `archive` + `-exportArchive` with `method: developer-id`
+  (`packaging/ExportOptions.plist`) + `-allowProvisioningUpdates` creates/embeds that profile, signs
+  Developer ID + hardened runtime, and strips get-task-allow automatically (the App ID's Keychain
+  Sharing capability + the Developer ID profile were minted by `-allowProvisioningUpdates`, no portal
+  support request needed). `build-signed.sh` (author-machine build) is retained as the no-Developer-ID
+  fallback; `CCTouchID.distribution.entitlements` remains for a direct-`codesign` path. Residual: an
+  on-hardware `enroll` + a gated write under the freshly *installed* notarized app is the final
+  end-to-end acceptance (the SE persist + biometric-sign primitives are already proven).
 - **`ns` domain-separator is defined but NOT wired into the broker's challenge (defense-in-depth,
   deferred).** SP2 added an optional `ns` field to `SignedDocument` (`Sources/CCGateCore/Canonical.swift`)
   so a Secure-Enclave signature — raw P-256 over `canonicalBytes`, with no external namespace like
