@@ -98,10 +98,7 @@ case "enroll":
     if getuid() == 0 { FileHandle.standardError.write(Data("cc-fido enroll: run as your login user (not sudo) — it needs your key + a touch\n".utf8)); exit(1) }
     let keys = flagValue("--keys", in: args).flatMap { Int($0) } ?? 1
     let home = realLoginHome()
-    do { try runEnroll(home: home, keys: keys, enroller: FidoEnroller(),
-                       blink: { fidoNegativeBlinkTest(handle: $0, namespace: $1) },
-                       signKeygen: fidoSignKeygen, handle: fidoKeyHandle(home: home), namespace: fidoProfile.namespace,
-                       profile: fidoProfile)
+    do { try runEnroll(home: home, keys: keys, enroller: FidoEnroller(), profile: fidoProfile)
          print("cc-fido: enrolled. Next: sudo cc-fido activate"); exit(0) }
     catch { FileHandle.standardError.write(Data("cc-fido enroll failed: \(error)\n".utf8)); exit(1) }
 case "_render-plist": print(renderPlist(profile: fidoProfile)); exit(0)

@@ -17,8 +17,9 @@ final class GateCeremonySeamTests: XCTestCase {
     }
 }
 struct AlwaysVerifier: Verifier { let ok: Bool; func verify(challenge: Data, signature: Data) -> Bool { ok } }
-struct NoopEnroller: Enroller {   // pre-Task-6 Enroller shape; switch to enroll/positiveControl in Task 6
-    func enrollPlan(home: String, index: Int) -> [[String]] { [] }
+struct NoopEnroller: Enroller {
+    func enroll(home: String, keys: Int, profile: GateProfile) throws {}
+    func positiveControl(home: String, profile: GateProfile) -> Bool { true }
     func isEnrolled(home: String) -> Bool { false }
     func removeKeyMaterial(home: String) {}
 }

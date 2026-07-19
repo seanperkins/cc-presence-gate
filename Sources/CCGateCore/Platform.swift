@@ -21,8 +21,10 @@ public enum PlatformError: Error { case failed(String) }
 
 #if os(macOS)
 /// Runs a command to completion, returns (exit, stdout, stderr). Direct (no sudo) — the caller is root.
+/// Public: backend enroll ceremonies (e.g. `FidoEnroller.enroll` in CCFidoBackend) spawn `ssh-keygen`
+/// etc. through this same env-scrubbed runner rather than reimplementing Process plumbing.
 @discardableResult
-func run(_ path: String, _ args: [String]) -> (Int32, String, String) {
+public func run(_ path: String, _ args: [String]) -> (Int32, String, String) {
     let p = Process(); p.executableURL = URL(fileURLWithPath: path); p.arguments = args
     p.environment = scrubbedEnv()
     let o = Pipe(), e = Pipe(); p.standardOutput = o; p.standardError = e
