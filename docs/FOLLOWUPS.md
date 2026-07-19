@@ -131,3 +131,22 @@ not yet exercised on hardware; drive it via the `/cc-fido:install` skill.
 - **`/cc-fido:install` skill — the default-policy scope note is loosely worded** ("gates sensitive/home
   paths"): the default `allow_tier` is `__HOME__/**` (most of `$HOME` passes without a touch); only
   `sensitive_globs` (dotfiles/credentials/LaunchAgents) and non-home writes gate.
+
+## cc-touch-id packaging/install (Task 10 review)
+- **`installOrchestration`'s managed-hook binary is not profile-aware — `cc-touch-id install` writes
+  the WRONG hook command.** `installOrchestration` (`Sources/CCGateCore/Install.swift:16`) calls
+  `renderManagedSettings(hookCmd: profile.codeDir + "/" + profile.binaryName + " hook")` — i.e. the
+  PLAIN binary path. That's correct for `cc-fido` (a plain signed CLI does everything, including the
+  hook). For `cc-touch-id`, the hook process signs with the Secure Enclave key and needs the
+  keychain-access-group entitlement that only the provisioned `.app` bundle carries
+  (`Sources/CCTouchIDBackend/TouchIdConstants.swift touchIdAppBinary`) — the plain daemon binary is
+  amfid-killed the moment the hook tries to use the key. The shipped install path works around this:
+  `install/install.sh` finishes by calling `cc-touch-id _render-managed` directly (main.swift wires
+  that internal subcommand to `touchIdAppBinary`, not `profile.codeDir/binaryName`), overwriting
+  whatever `installOrchestration` wrote. Fail-closed (a broken hook just fails signing, doesn't bypass
+  the gate) but broken if anyone runs `sudo cc-touch-id install` directly instead of going through
+  `install/install.sh` — they'll get a managed-settings hook pointing at a binary that can never
+  complete a Touch ID signature. Deferred / Pillar-C-adjacent proper fix: make the managed-hook binary
+  profile-aware (e.g. a `hookBinaryPath` field on `GateProfile`, defaulting to
+  `codeDir/binaryName` for `cc-fido` and to `touchIdAppBinary` for `cc-touch-id`) so the `install`
+  subcommand alone is correct without the install.sh workaround.

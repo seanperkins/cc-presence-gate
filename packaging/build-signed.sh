@@ -67,8 +67,10 @@ codesign --force --deep --options runtime --timestamp \
 
 # --- d. verify -----------------------------------------------------------------------------------
 echo "--- Step d: verify signature + entitlements ---"
-codesign -dvvv "$APP" 2>&1 | tee /tmp/cc-touch-id-codesign-dvvv.out
-if ! grep -q "Authority=$DEV_ID_IDENTITY" /tmp/cc-touch-id-codesign-dvvv.out; then
+CODESIGN_DVVV_OUT="$(mktemp -t cc-touch-id-codesign-dvvv)"
+trap 'rm -f "$CODESIGN_DVVV_OUT"' EXIT
+codesign -dvvv "$APP" 2>&1 | tee "$CODESIGN_DVVV_OUT"
+if ! grep -q "Authority=$DEV_ID_IDENTITY" "$CODESIGN_DVVV_OUT"; then
   echo "FAIL: codesign -dvvv did not show Developer ID authority '$DEV_ID_IDENTITY'" >&2
   exit 1
 fi

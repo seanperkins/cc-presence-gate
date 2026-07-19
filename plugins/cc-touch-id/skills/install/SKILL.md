@@ -65,17 +65,42 @@ unprivileged reads suffice) and parse the `rollup`. Branch:
 - `degraded` → diagnose which component is false in the JSON and repair (usually re-run install or
   activate)
 
-## Step 1 — Prereqs + the signed app (one sudo prompt, no touch)
-Tell the user: `! sudo APP=<path-to-the-.app-from-Step-0> POLICY=<path-or-default> bash $REPO_ROOT/install/install.sh`
-(If they haven't authored a policy, note the default gates sensitive/home paths; the default lives at
-`$REPO_ROOT/plugins/cc-touch-id/install/policy.json`.) The script builds the release binary, creates
-the `_cctouchid` account, copies the plain daemon binary AND the signed `.app`, installs the policy,
-and writes the LaunchDaemon plist + managed-settings — then stops with a "run enroll next" message
-because no key is enrolled yet. Confirm `status` rollup is now `prereqs-only`.
+The install/enroll/activate sequence has a strict order, because two DIFFERENT binaries are involved
+and only one of them carries the Secure Enclave entitlement:
 
-## Step 2 — Enroll a key (Touch ID prompt; runs as the user)
-Tell the user: `! $REPO_ROOT/.build/release/cc-touch-id enroll`. They'll see a Touch ID sheet — have
-them touch the sensor. Confirm rollup is now `enrolled`.
+1. Build the entitled `.app` (Step 0 above, `packaging/build-signed.sh`) — login user.
+2. Build the plain daemon binary — login user: `! cd $REPO_ROOT && swift build -c release`. (The
+   daemon only verifies signatures; it never touches the Secure Enclave, so it can stay ad-hoc-signed.)
+3. Run `install/install.sh` under `sudo` (Step 1 below) — privileged. It places BOTH binaries under
+   `/opt/cc-touch-id-gate`, creates dirs/account, installs the policy, writes the LaunchDaemon plist
+   pointing at the plain binary, and writes managed-settings pointing at the `.app` binary.
+4. Enroll (Step 2 below) using the INSTALLED, ENTITLED `.app` binary — login user, NOT sudo, needs a
+   touch.
+5. Activate (Step 3 below) — `sudo cc-touch-id activate` (or re-run `install.sh`) — privileged.
+
+## Step 1 — Prereqs + the signed app (one sudo prompt, no touch)
+Before running the installer, make sure BOTH binaries exist as the login user (NOT root — building as
+root under `sudo` would leave a root-owned `.build/` that breaks future unprivileged builds):
+`! cd $REPO_ROOT && swift build -c release` (plain daemon binary; the entitled `.app` was already
+built in Step 0).
+
+Then tell the user: `! sudo APP=<path-to-the-.app-from-Step-0> POLICY=<path-or-default> bash $REPO_ROOT/install/install.sh`
+(If they haven't authored a policy, note the default gates sensitive/home paths; the default lives at
+`$REPO_ROOT/plugins/cc-touch-id/install/policy.json`.) The script (run via `sudo`, so it must be run
+from the user's own login shell — see install.sh's `SUDO_USER` requirement) creates the `_cctouchid`
+account, copies the ALREADY-BUILT plain daemon binary AND the signed `.app` into place, installs the
+policy (keyed off the login user's home, not root's), and writes the LaunchDaemon plist + managed-
+settings — then stops with a "run enroll next" message because no key is enrolled yet. Confirm
+`status` rollup is now `prereqs-only`.
+
+## Step 2 — Enroll a key (Touch ID prompt; runs as the user, NOT sudo)
+Tell the user: `! /opt/cc-touch-id-gate/cc-touch-id.app/Contents/MacOS/cc-touch-id enroll` — run as the
+plain login user, no `sudo`. This is the INSTALLED, ENTITLED app binary (`touchIdAppBinary`), not the
+plain SwiftPM build under `.build/release/` — the Secure Enclave key-creation call
+(`SecKeyCreateRandomKey`) needs the keychain-access-group entitlement that only this binary carries;
+the plain `.build/release/cc-touch-id` binary is amfid-killed the moment it tries. It must also run as
+the login user (not root/sudo) because the SE key lands in the login user's keychain. They'll see a
+Touch ID sheet — have them touch the sensor. Confirm rollup is now `enrolled`.
 
 ## Step 3 — Activate the daemon (re-run install.sh; one sudo prompt)
 Tell the user: `! sudo APP=<same-path> bash $REPO_ROOT/install/install.sh` again. Now that a key is

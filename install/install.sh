@@ -29,8 +29,28 @@ APP="${APP:-$REPO_ROOT/packaging/.dd/Build/Products/Release/cc-touch-id.app}"
 
 echo "=== cc-touch-id install ==="
 
-swift build -c release --package-path "$REPO_ROOT"
+# This script runs under sudo (see SKILL.md), so $HOME here is root's (/var/root), not the login
+# user's. Never build or derive paths off root's $HOME. The plain daemon binary must already be
+# built by the LOGIN user BEFORE this script runs (SKILL.md Step 1) — building it here as root would
+# leave a root-owned .build/ that breaks later unprivileged `swift build` runs.
+if [ -z "${SUDO_USER:-}" ]; then
+  echo "FAIL: \$SUDO_USER is empty — this script must be run via 'sudo' from your normal login shell" >&2
+  echo "      (e.g. 'sudo bash $REPO_ROOT/install/install.sh'), not as a root login/root crontab." >&2
+  exit 1
+fi
+
+# Login user's real home (mirrors Sources/cc-touch-id/main.swift's realLoginHome()) — used for the
+# policy __HOME__ substitution below. Never use root's $HOME for this.
+LOGIN_HOME="$(dscl . -read /Users/"$SUDO_USER" NFSHomeDirectory 2>/dev/null | awk '{print $2}')"
+[ -z "$LOGIN_HOME" ] && LOGIN_HOME="$HOME"
+
 BIN="$REPO_ROOT/.build/release/cc-touch-id"
+if [ ! -x "$BIN" ]; then
+  echo "FAIL: $BIN not found — build it as the LOGIN user before running this script:" >&2
+  echo "      su - $SUDO_USER -c 'cd $REPO_ROOT && swift build -c release'" >&2
+  echo "      (or, outside sudo: cd $REPO_ROOT && swift build -c release)" >&2
+  exit 1
+fi
 
 echo "--- account ---"
 sudo bash "$SCRIPT_DIR/account-setup.sh"
@@ -53,7 +73,7 @@ else
 fi
 
 echo "--- policy (render: substitute __HOME__, validate, lint) ---"
-"$BIN" _render-policy "$POLICY" "$HOME" | sudo tee "$CODE_DIR/policy.json" >/dev/null
+"$BIN" _render-policy "$POLICY" "$LOGIN_HOME" | sudo tee "$CODE_DIR/policy.json" >/dev/null
 sudo cp "$POLICY" "$CODE_DIR/policy.json.template"
 
 echo "--- perms ---"
@@ -66,8 +86,10 @@ sudo chown root:wheel "$PLIST"; sudo chmod 644 "$PLIST"
 "$BIN" _render-managed | sudo tee "$CLAUDE_CODE_DIR/managed-settings.json" >/dev/null
 sudo chown root:wheel "$CLAUDE_CODE_DIR/managed-settings.json"; sudo chmod 644 "$CLAUDE_CODE_DIR/managed-settings.json"
 
-CLAUDE_BIN="${CLAUDE_BIN:-$(command -v claude 2>/dev/null || echo /Users/sean/.local/bin/claude)}"
-"$BIN" _cc-version "$CLAUDE_BIN" 2>/dev/null | sudo tee "$KEY_DIR/cc-version" >/dev/null || true
+CLAUDE_BIN="${CLAUDE_BIN:-$(command -v claude 2>/dev/null || true)}"
+if [ -n "$CLAUDE_BIN" ]; then
+  "$BIN" _cc-version "$CLAUDE_BIN" 2>/dev/null | sudo tee "$KEY_DIR/cc-version" >/dev/null || true
+fi
 
 # Prereqs are now installed. Break the install<->enroll circularity: if no key is enrolled yet, STOP
 # here with instructions (exit 0, not a hard refusal) — enroll needs the account+dirs we just created;
