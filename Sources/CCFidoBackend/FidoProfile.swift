@@ -19,9 +19,10 @@ public let fidoSignKeygen = "/opt/homebrew/opt/openssh/bin/ssh-keygen"   // TODO
 public let fidoVerifyKeygen = "/usr/bin/ssh-keygen"
 
 public func makeFidoContext(home: String) -> GateContext {
-    GateContext(
+    let signer = FidoSigner(keygen: fidoSignKeygen, handlePath: fidoKeyHandle(home: home), namespace: fidoProfile.namespace)
+    return GateContext(
         profile: fidoProfile,
-        signer: FidoSigner(keygen: fidoSignKeygen, handlePath: fidoKeyHandle(home: home), namespace: fidoProfile.namespace),
+        ceremony: FidoCeremony(signer: signer),
         verifier: FidoVerifier(keygen: fidoVerifyKeygen, allowedSigners: fidoProfile.allowedSigners,
                                principal: "gate-principal", namespace: fidoProfile.namespace, keydir: fidoProfile.keydir),
         enroller: FidoEnroller())
