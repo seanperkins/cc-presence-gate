@@ -180,6 +180,17 @@ not yet exercised on hardware; drive it via the `/cc-fido:install` skill.
   ONLINE check (needs network at first launch); it just lacks offline validation. To restore offline
   stapling: staple on a non-macOS-26 machine, or wrap the `.app` in a signed+notarized **DMG** and
   staple the DMG (different code path, likely dodges the bug).
+- **`_presence-test` false-fails when run as the login user (harness gotcha, not a gate bug).**
+  `cc-touch-id _presence-test` signs a nonce with the SE key (needs the login user's GUI/biometric
+  session) and then verifies it via `TouchIdVerifier`, which READS `allowed_signers`. But `enroll`
+  chowns `allowed_signers` to the service account (`/var/cctouchid/allowed_signers`, `-rw-------`
+  `_cctouchid`), so the login user gets EACCES and the verify step reports "signature did not verify"
+  even though the signature is valid. At runtime this is a non-issue — the **broker** (running as
+  `_cctouchid`) is what verifies. So don't use `_presence-test` as a login-user acceptance step
+  (removed from `touchid_notarize_accept.sh`); prove sign+verify via enroll's positive-control
+  (verifies against the live-exported pubkey) and the on-disk path via `touchid_accept.sh`'s broker
+  gated-write. A real fix would have `_presence-test` verify against the live SE export like
+  `positiveControl` does, rather than reading the service-account-owned file.
 - **`ns` domain-separator is defined but NOT wired into the broker's challenge (defense-in-depth,
   deferred).** SP2 added an optional `ns` field to `SignedDocument` (`Sources/CCGateCore/Canonical.swift`)
   so a Secure-Enclave signature — raw P-256 over `canonicalBytes`, with no external namespace like

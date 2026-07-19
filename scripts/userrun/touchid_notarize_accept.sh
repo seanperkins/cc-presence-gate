@@ -50,14 +50,19 @@ echo "=== 4. the DECISIVE runtime proof: persistent SE key enrolls under this si
 echo ">>> A native Touch ID sheet will appear — TOUCH to confirm the enrollment positive-control <<<"
 if "$BIN_APP" enroll; then pass "enroll succeeded — SE key created + touch verified (no -34018 under Developer ID)"; else fail "enroll failed — inspect stderr (SE create / register / touch)"; fi
 
-echo "=== 5. presence test: the enrolled key requires a live finger + round-trips the verifier ==="
-echo ">>> TOUCH again for the presence test <<<"
-if "$BIN_APP" _presence-test; then pass "presence test verified"; else fail "presence test failed"; fi
+# NOTE: we intentionally do NOT run `_presence-test` here. It verifies the signature against the
+# on-disk `allowed_signers`, which enroll chowns to the service account (mode 600) — so run as the
+# LOGIN user it hits EACCES and false-fails ("signature did not verify"). Verifying the on-disk
+# registered key is the BROKER's job (it runs as the service account); that path is exercised by
+# scripts/userrun/touchid_accept.sh's gated-write round-trip. Section 4's enroll positive-control
+# already proves the SE key signs + verifies (against its live-exported pubkey) under this signature.
 
 echo
 if [ "$FAILED" = 0 ]; then
-  echo "ACCEPT: installed cc-touch-id.app is the notarized Developer-ID distribution build and fully functional."
-  echo "NEXT: run scripts/userrun/touchid_accept.sh for the full custody / gated-write / audit acceptance."
+  echo "ACCEPT: installed cc-touch-id.app is the notarized Developer-ID distribution build; it enrolls a"
+  echo "        persistent SE key and signs with a touch under the Developer-ID signature."
+  echo "NEXT: run scripts/userrun/touchid_accept.sh for the full custody / gated-write / audit acceptance"
+  echo "      (that suite exercises the broker verifying the touch signature against allowed_signers)."
   exit 0
 else
   echo "REJECT: one or more checks failed above."
