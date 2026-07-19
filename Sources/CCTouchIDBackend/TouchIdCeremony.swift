@@ -24,8 +24,12 @@ public final class TouchIdCeremony: GateCeremony {
             sem.signal()
         }
         if sem.wait(timeout: .now() + TouchIdCeremony.giveUp) == .timedOut {
-            canceller.cancel()   // LAContext.invalidate() → dismiss the sheet; seSign throws → result stays nil
-            sem.wait()           // let the sign thread unwind before returning
+            canceller.cancel()   // best-effort: invalidate the LAContext to try to dismiss the sheet
+            return nil           // DENY at the deadline. Do NOT wait for the sign thread — LAContext
+                                 // .invalidate() does not reliably abort a SecKeyCreateSignature on a
+                                 // fetched key, so it may still be blocked on the sheet. The caller
+                                 // (runWrite/runApprove) denies and the process exits right after, which
+                                 // tears down any lingering sheet.
         }
         lock.lock(); let out = result; lock.unlock()
         return out
