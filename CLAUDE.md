@@ -176,6 +176,23 @@ amfid SIGKILL, or `SecKeyCreateRandomKey -34018`). Two build scripts in `packagi
   the RESOLVED entry in `docs/FOLLOWUPS.md` and
   `docs/superpowers/specs/2026-07-19-cc-touch-id-notarized-distribution-design.md`.
 
+### Distribution: three install paths (who obtains the `.app`)
+
+The entitled `.app` reaches a user's `/opt` one of three ways; the install skill (Step 0) branches on
+whether they have a Developer ID identity:
+
+- **Self-build** — a user with their own Apple Developer account runs `build-distribution.sh`
+  (retargeting `DEVELOPMENT_TEAM`/bundle id if their team ≠ `HH3SJBAS42`) or `build-signed.sh`, then
+  installs their own binary (`EXPECTED_TEAM=<their-team>`). Highest trust: they compiled + signed it.
+- **Download the maintainer's prebuilt** — `install/fetch-app.sh` fetches the release pinned in
+  `plugins/cc-touch-id/install/release.json` and verifies **SHA-256 pin + notarization + team + no
+  get-task-allow + stapled** before handing the path to `install.sh`. Fails closed if unpublished.
+- **Maintainer publish** — `packaging/publish-release.sh` (after `build-distribution.sh`) uploads the
+  stapled `.app` as a GitHub release asset and writes the pin into `release.json` (commit by hand).
+
+`install.sh` itself hard-fails on an invalid signature or a team ≠ `EXPECTED_TEAM` (default
+`HH3SJBAS42`, `=any` to skip) before copying into `/opt` — protecting all three paths.
+
 ## Conventions & gotchas
 
 - **Fail-closed everywhere**: unreadable payload, missing policy, bad regex, service-account lookup

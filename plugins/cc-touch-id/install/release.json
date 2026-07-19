@@ -1,0 +1,12 @@
+{
+  "_comment": "Trust anchor for the prebuilt notarized cc-touch-id.app. Written by packaging/publish-release.sh; verified by install/fetch-app.sh. While published=false or sha256 is empty, fetch-app.sh fails closed and callers must build from source.",
+  "repo": "seanperkins/cc-presence-gate",
+  "version": "0.1.0",
+  "tag": "",
+  "asset": "cc-touch-id.app.zip",
+  "asset_url": "",
+  "sha256": "",
+  "team_id": "HH3SJBAS42",
+  "min_macos": "13.0",
+  "published": false
+}

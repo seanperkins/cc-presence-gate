@@ -19,41 +19,49 @@ read the output, and advance.
 > silently replace the FIDO hook with the Touch ID hook, and vice versa. Confirm they want that
 > before proceeding — do not install both and assume they'll layer.
 
-## Step 0 — Preflight + build the provisioned, notarized `.app`
+## Step 0 — Preflight + obtain the provisioned, entitled `.app`
 
 Unlike `cc-fido` (a plain signed CLI), `cc-touch-id`'s hook/enroll/write roles touch a Secure Enclave
 key, which requires a **provisioned, entitled `.app` bundle** — a bare CLI binary is killed by amfid
-the moment it tries to create/use that key (see `task0-se/REPORT.md`). Building that `.app` needs
-real Apple Developer credentials on the machine; there is no way around this step.
+the moment it tries to create/use that key (see `task0-se/REPORT.md`). You either **download** the
+maintainer's prebuilt notarized `.app` or **build** one yourself; the rest of the install is identical.
 
-1. Establish `$REPO_ROOT` — a local clone of `cc-fido-gate` with `Package.swift` at its root (the
-   plugin cache subtree alone is not enough — same reasoning as `cc-fido`'s install skill, see
-   `docs/superpowers/spikes/2026-07-18-marketplace-clone-mechanics.md`). If the user already has one,
-   use it; otherwise `! git clone <repo-url> ~/cc-fido-gate && REPO_ROOT=~/cc-fido-gate`.
-2. Toolchain: `! xcode-select -p` (must print a path; if not, `xcode-select --install`).
-3. Touch ID hardware + an enrolled fingerprint: `! bioutil -r` (or `bioutil -c` to check the
-   fingerprint count). No Touch ID sensor, or zero fingerprints enrolled, means the whole plugin is a
-   dead end on this Mac — stop and tell the user so before going further.
-4. A Developer ID Application certificate for team `HH3SJBAS42`:
-   `! security find-identity -v -p codesigning | grep "Developer ID Application.*HH3SJBAS42"`.
-   If **absent**: this plugin cannot produce a distributable, notarized build on this machine. Offer
-   the dev-signed fallback — a local, Apple-Development-signed build that works only on THIS Mac (no
-   notarization, no `stapler staple`; skip straight to a plain `xcodebuild … -configuration Release`
-   without the Developer-ID re-sign/notarize steps in `packaging/build-signed.sh`). Tell the user this
-   fallback build cannot be copied to another machine or survive Gatekeeper quarantine re-checks the
-   way the notarized build can.
-5. A notarization credential: `! xcrun notarytool history --keychain-profile "cc-touch-id-notary"`
-   (any output other than a credential/profile error confirms the profile is stored). If missing and
-   the user has an App Store Connect API key or app-specific password, have them store one:
-   `! xcrun notarytool store-credentials "cc-touch-id-notary" --apple-id <id> --team-id HH3SJBAS42 --password <app-specific-password>`.
-   Without this, notarization in step 6 will fail — the dev-signed fallback is the only option.
-6. Build: `! cd $REPO_ROOT && bash packaging/build-signed.sh` (Developer-ID path) — or, for the
-   dev-signed fallback, walk the user through `packaging/project.yml` → `xcodegen generate` →
-   `xcodebuild -project packaging/CCTouchIDGate.xcodeproj -scheme cc-touch-id -configuration Release -allowProvisioningUpdates build`
-   by hand, skipping the re-sign/notarize/staple steps, and note the resulting `.app` is
-   machine-local only.
-7. Confirm the built `.app` path (printed at the end of `build-signed.sh`, or under
-   `packaging/.dd/Build/Products/Release/cc-touch-id.app`) — you'll need it for Step 1.
+**Preflight (all paths):**
+1. Establish `$REPO_ROOT` — a local clone with `Package.swift` at its root (the plugin cache subtree
+   alone is not enough — see `docs/superpowers/spikes/2026-07-18-marketplace-clone-mechanics.md`). If
+   the user has one, use it; otherwise `! git clone <repo-url> ~/cc-presence-gate && REPO_ROOT=~/cc-presence-gate`.
+2. Touch ID hardware + an enrolled fingerprint: `! bioutil -r` (or `bioutil -c`). No sensor / zero
+   fingerprints ⇒ the plugin is a dead end on this Mac — stop and say so before going further.
+
+**Then pick the path** — check whether the user has a Developer ID identity:
+`! security find-identity -v -p codesigning | grep "Developer ID Application"`.
+
+### Path A — download the maintainer's prebuilt notarized `.app` (no Apple account needed)
+Best for users without their own Developer ID. Fetches the pinned release and verifies it (SHA-256 pin
++ notarization + team + no `get-task-allow` + stapled) before use:
+```
+! APP="$(bash $REPO_ROOT/install/fetch-app.sh)" && echo "verified app: $APP"
+```
+If it reports **no published release pinned yet**, there is no prebuilt binary available — the user
+must either self-build (Path B) or wait for a release. Do not fabricate a download.
+
+### Path B — self-build with your own Developer ID (higher trust: you compiled + signed it)
+Best for users with an Apple Developer account. Two sub-options:
+- **Proper notarized build** (`! cd $REPO_ROOT && bash packaging/build-distribution.sh`): archive →
+  export `developer-id` → notarize → staple. Uses team `HH3SJBAS42` by default; a self-builder with a
+  DIFFERENT team must first retarget `DEVELOPMENT_TEAM`/`teamID` in `packaging/project.yml` +
+  `packaging/ExportOptions.plist` (and the `com.seanperkins.cc-touch-id` bundle id, since an explicit
+  App ID is team-unique) and store a `cc-touch-id-notary` notarytool credential. Output:
+  `packaging/.dd/export/cc-touch-id.app`.
+- **Quick this-Mac dev build** (`! cd $REPO_ROOT && bash packaging/build-signed.sh`): author-machine
+  build (Development profile, carries `get-task-allow`, **not** notarized). Works only on the signing
+  Mac and cannot be redistributed — fine for local use. Output under `packaging/.dd/Build/Products/Release/`.
+
+When self-building with a non-`HH3SJBAS42` team, pass `EXPECTED_TEAM=<your-team>` to `install.sh` in
+Step 1 (its default team check is `HH3SJBAS42`).
+
+**Confirm the `.app` path** (the `APP=` value for Step 1): Path A prints it; Path B leaves it at the
+path noted above.
 
 ## Always start by reading state
 Ask the user to run `$REPO_ROOT/.build/release/cc-touch-id status --json` (or run it yourself if

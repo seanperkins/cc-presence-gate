@@ -26,6 +26,11 @@ LAUNCHD_LABEL=com.cc-touch-id-gate.brokerd
 POLICY="${POLICY:-$REPO_ROOT/plugins/cc-touch-id/install/policy.json}"
 # Where packaging/build-signed.sh leaves the signed/notarized .app; APP env var overrides.
 APP="${APP:-$REPO_ROOT/packaging/.dd/Build/Products/Release/cc-touch-id.app}"
+# The .app's code-signing team must match this before we place it in the privileged /opt location.
+# Default = the project's team (correct for the maintainer's build-signed/build-distribution output
+# and for install/fetch-app.sh downloads). SELF-BUILDERS signing with their OWN Developer ID override
+# it: EXPECTED_TEAM=<your-team>, or EXPECTED_TEAM=any to accept any valid signature.
+EXPECTED_TEAM="${EXPECTED_TEAM:-HH3SJBAS42}"
 
 echo "=== cc-touch-id install ==="
 
@@ -68,6 +73,24 @@ sudo codesign --force --options runtime --sign - "$CODE_DIR/cc-touch-id"
 
 echo "--- entitled .app (hook/write/enroll — needs the Secure Enclave keychain-access-group) ---"
 if [ -d "$APP" ]; then
+  # Verify what we are about to place in the privileged /opt location. HARD-FAIL on a broken/tampered
+  # signature or a team mismatch; the strong supply-chain checks (sha256 pin + notarization) live in
+  # install/fetch-app.sh for the download path — a locally-built .app is trusted because you built it.
+  if ! codesign --verify --strict "$APP" 2>/dev/null; then
+    echo "FAIL: $APP has an INVALID/broken code signature — refusing to install." >&2; exit 1
+  fi
+  APP_TEAM="$(codesign -dvvv "$APP" 2>&1 | sed -n 's/^TeamIdentifier=//p')"
+  if [ "$EXPECTED_TEAM" != "any" ] && [ "$APP_TEAM" != "$EXPECTED_TEAM" ]; then
+    echo "FAIL: $APP team is '$APP_TEAM', expected '$EXPECTED_TEAM'." >&2
+    echo "      Self-building with your own Developer ID? re-run with EXPECTED_TEAM=$APP_TEAM (or =any)." >&2
+    exit 1
+  fi
+  if spctl -a -t exec "$APP" >/dev/null 2>&1; then
+    echo "verified: notarized Developer-ID build (team $APP_TEAM)"
+  else
+    echo "NOTE: $APP is signed (team $APP_TEAM) but NOT notarized — fine for this machine / self-build,"
+    echo "      not for redistribution to other Macs (they would Gatekeeper-block it)."
+  fi
   sudo rm -rf "$CODE_DIR/cc-touch-id.app"
   sudo cp -R "$APP" "$CODE_DIR/cc-touch-id.app"
   echo "installed signer app -> $CODE_DIR/cc-touch-id.app"
