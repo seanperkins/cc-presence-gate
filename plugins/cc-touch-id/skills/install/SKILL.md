@@ -110,6 +110,15 @@ the plain `.build/release/cc-touch-id` binary is amfid-killed the moment it trie
 the login user (not root/sudo) because the SE key lands in the login user's keychain. They'll see a
 Touch ID sheet — have them touch the sensor. Confirm rollup is now `enrolled`.
 
+> **Sudo caveat — have them authenticate sudo FIRST.** Enroll self-escalates via `sudo` for the
+> pubkey-registration step, and that mid-run `sudo` password prompt is **unreliable** when enroll is
+> triggered standalone or through the `!` runner (no controlling TTY — the prompt shows but won't accept
+> the password). Have the user run **`sudo -v` in their real terminal**, then run enroll; the cached
+> credential means the registration step won't re-prompt. (Running enroll immediately after Step 1's
+> `install.sh` also works — that already cached sudo.) Note the split: `enroll` must be the login user
+> (refuses `sudo`), but the **privileged-only** commands — `enroll-file`, `enroll-dir`, `uninstall` —
+> can be run **directly under `sudo`** (e.g. `sudo cc-touch-id enroll-file ~/.env`), no prompt needed.
+
 ## Step 3 — Activate the daemon (re-run install.sh; one sudo prompt)
 Tell the user: `! sudo APP=<same-path> bash $REPO_ROOT/install/install.sh` again. Now that a key is
 enrolled, the script proceeds past the circularity stop, bootstraps the LaunchDaemon, kickstarts a

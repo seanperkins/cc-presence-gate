@@ -200,6 +200,20 @@ not yet exercised on hardware; drive it via the `/cc-fido:install` skill.
   a future hardening could have the install warn, or a running hook detect a version/mtime skew and
   refuse. Threat-model note: the guarantee holds for sessions started *after* install; it does not
   retroactively cover an agent already running.
+- **`enroll`'s mid-run `sudo` prompt is unreliable (needs pre-cached sudo).** `runPrivileged`
+  (`CLIHelpers.swift`) spawns `sudo` as a subprocess of the Swift process; when `enroll` triggers that
+  interactively (standalone, or via a no-TTY runner), the `Password:` prompt displays but the keystrokes
+  aren't accepted — sudo can't read from the controlling terminal in that spawn context. (Confirmed on
+  hardware; it is NOT the scrubbed env — inheriting the full env didn't help, so that avenue was
+  reverted.) The tool implicitly relies on sudo being **pre-cached**: the normal flow runs `install.sh`
+  (one sudo) then `enroll` seconds later, so the registration step uses the cached timestamp and never
+  prompts. Documented workaround (README + install skill Step 2): `sudo -v` before `enroll`. Note the
+  privileged-**only** commands (`enroll-file`/`enroll-dir`/`uninstall`) sidestep it entirely — run them
+  under `sudo` directly (root's internal `sudo` calls don't prompt); only mixed `enroll` (login-user SE
+  key + one privileged step) hits it. Proper fixes: (A) `sudo -A` + an osascript askpass helper (GUI
+  prompt, no TTY); or (B) split the privileged registration into a separate shell-invoked
+  `sudo cc-touch-id _register …` step; or (C) have `enroll` pre-flight a single up-front auth instead of
+  a mid-flow prompt. Deferred — the `sudo -v` bridge is the current answer.
 - **`ns` domain-separator is defined but NOT wired into the broker's challenge (defense-in-depth,
   deferred).** SP2 added an optional `ns` field to `SignedDocument` (`Sources/CCGateCore/Canonical.swift`)
   so a Secure-Enclave signature — raw P-256 over `canonicalBytes`, with no external namespace like

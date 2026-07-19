@@ -115,6 +115,14 @@ Check state with `cc-touch-id status`. Remove everything with `sudo /opt/cc-touc
 uninstall` (delete the Secure Enclave key first via the entitled app's `… _delete-key`). Run the
 sudo/touch steps in a **real terminal** so `sudo` can prompt and the Touch ID sheet can appear.
 
+> **Sudo note for `enroll`.** `cc-touch-id enroll` must run as **your login user** (it creates *your*
+> Secure Enclave key — it refuses to run under `sudo`), and it self-escalates for one privileged step.
+> That mid-run `sudo` prompt is unreliable when `enroll` is run standalone, so **authenticate sudo
+> first**: `sudo -v`, then `cc-touch-id enroll`. (Running `enroll` right after `install.sh` also works —
+> that already cached your sudo.) The **privileged-only** commands are the opposite — `enroll-file`,
+> `enroll-dir`, and `uninstall` can be run **directly under `sudo`** (e.g. `sudo cc-touch-id enroll-file
+> ~/.env`), which needs no interactive prompt at all.
+
 > **⚠️ Restart Claude Code after installing.** The `PreToolUse` hook loads from managed-settings at
 > Claude Code **startup** — a session already running when you install is **not** gated (its tool calls
 > bypass the hook entirely). Quit and reopen Claude Code, or start a fresh session, for the gate to apply.
