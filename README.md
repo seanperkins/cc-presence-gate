@@ -67,6 +67,10 @@ Manual:
 3. `sudo cc-fido activate`                                 # start the daemon
 Check state any time: `cc-fido status`. Remove everything: `sudo cc-fido uninstall`.
 
+> **⚠️ Restart Claude Code after installing.** The `PreToolUse` hook loads from managed-settings at
+> Claude Code **startup** — a session already running when you install is **not** gated (its tool calls
+> bypass the hook entirely). Quit and reopen Claude Code, or start a fresh session, for the gate to apply.
+
 ## Touch ID gate (`cc-touch-id`)
 
 An alternative gate that swaps the hardware security key for your Mac's built-in Touch ID sensor
@@ -110,6 +114,10 @@ sudo APP="$PWD/packaging/.dd/export/cc-touch-id.app" bash install/install.sh
 Check state with `cc-touch-id status`. Remove everything with `sudo /opt/cc-touch-id-gate/cc-touch-id
 uninstall` (delete the Secure Enclave key first via the entitled app's `… _delete-key`). Run the
 sudo/touch steps in a **real terminal** so `sudo` can prompt and the Touch ID sheet can appear.
+
+> **⚠️ Restart Claude Code after installing.** The `PreToolUse` hook loads from managed-settings at
+> Claude Code **startup** — a session already running when you install is **not** gated (its tool calls
+> bypass the hook entirely). Quit and reopen Claude Code, or start a fresh session, for the gate to apply.
 
 > **macOS 26 note:** current `stapler`/`spctl` regressions ship the build notarized but *un-stapled* —
 > it passes Gatekeeper via the online check, so first launch needs network. See

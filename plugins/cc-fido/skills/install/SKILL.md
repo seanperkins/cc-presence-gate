@@ -53,6 +53,11 @@ authenticator not settling — retry with the intended key plugged in. Confirm r
 Tell the user: `! sudo $REPO_ROOT/.build/release/cc-fido activate`. It prints whether the socket is reachable. If NOT reachable,
 have them run it again (it re-kickstarts a fresh socket — the known stale-socket fix). Confirm `active`.
 
+## Step 4 — Restart Claude Code (REQUIRED — the gate loads at startup)
+The `PreToolUse` hook is read from managed-settings **only at Claude Code startup** — a session that was
+already running when you installed is **NOT gated** (its tool calls bypass the hook). Tell the user to
+**quit and reopen Claude Code** (or start a fresh session) before relying on the gate.
+
 ## Verify
 `$REPO_ROOT/.build/release/cc-fido status` should read `active`. Optionally have them prove the gate
 end-to-end via `$REPO_ROOT/scripts/userrun/task7_accept.sh` (needs a touch).

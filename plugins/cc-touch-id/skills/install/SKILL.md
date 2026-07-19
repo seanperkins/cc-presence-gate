@@ -116,10 +116,18 @@ enrolled, the script proceeds past the circularity stop, bootstraps the LaunchDa
 fresh socket, and runs a non-destructive canary (the broker must deny a write to a control path).
 Confirm `active`.
 
+## Step 4 — Restart Claude Code (REQUIRED — the gate loads at startup)
+The `PreToolUse` hook lives in managed-settings, which Claude Code reads **only at startup**. A Claude
+Code session that was already running when you installed is **NOT gated** — its tool calls bypass the
+hook entirely (an agent in that session can still write `.env` etc.). Tell the user to **quit and
+reopen Claude Code** (or start a fresh session) before relying on the gate. Confirm by, in the new
+session, having the agent attempt a gated action (e.g. a Write to a `.env`) and seeing it prompt for
+Touch ID / get denied.
+
 ## Verify
-`$REPO_ROOT/.build/release/cc-touch-id status` should read `active`. There is no `cc-touch-id`
-equivalent of `scripts/userrun/task7_accept.sh` yet — deep hardware acceptance is Task 11
-(`scripts/userrun/touchid_accept.sh`).
+`$REPO_ROOT/.build/release/cc-touch-id status` should read `active`. The full hardware gate acceptance
+is `scripts/userrun/touchid_accept.sh` (needs sudo + touches); `scripts/userrun/touchid_notarize_accept.sh`
+checks the installed app is the notarized distribution build.
 
 ## Repair / Uninstall
 - Broker unreachable / stale socket → `! sudo $REPO_ROOT/.build/release/cc-touch-id activate`.

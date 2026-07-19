@@ -191,6 +191,15 @@ not yet exercised on hardware; drive it via the `/cc-fido:install` skill.
   (verifies against the live-exported pubkey) and the on-disk path via `touchid_accept.sh`'s broker
   gated-write. A real fix would have `_presence-test` verify against the live SE export like
   `positiveControl` does, rather than reading the service-account-owned file.
+- **Pre-existing Claude Code sessions are NOT gated (install requires a restart).** The `PreToolUse`
+  hook is delivered via `managed-settings.json`, which Claude Code reads only at **startup**. A session
+  already running when the gate is installed never loads the hook, so its tool calls (including an
+  agent's Write to `.env`) bypass the gate entirely — confirmed live: an agent Write to a `.env` in a
+  session that predated the install succeeded with no touch. Mitigation is documented (install skills'
+  Step 4 + README callout: quit/reopen Claude Code after install). No in-product enforcement exists —
+  a future hardening could have the install warn, or a running hook detect a version/mtime skew and
+  refuse. Threat-model note: the guarantee holds for sessions started *after* install; it does not
+  retroactively cover an agent already running.
 - **`ns` domain-separator is defined but NOT wired into the broker's challenge (defense-in-depth,
   deferred).** SP2 added an optional `ns` field to `SignedDocument` (`Sources/CCGateCore/Canonical.swift`)
   so a Secure-Enclave signature — raw P-256 over `canonicalBytes`, with no external namespace like
