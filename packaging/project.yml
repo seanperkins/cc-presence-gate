@@ -1,0 +1,56 @@
+# xcodegen spec: build the real cc-touch-id CLI as a provisioned macOS .app so it can create/use the
+# Secure Enclave key (entitlement + embedded profile — see task0-se/REPORT.md). The SAME binary serves
+# every role (daemon|hook|write|enroll); the daemon role just doesn't touch the SE.
+#
+# NOTE on source layout: unlike the original fork spike (single Sources/CCTouchIDCore), this repo
+# (post core-extraction) splits shared logic into Sources/CCGateCore (profile-agnostic) and
+# Sources/CCTouchIDBackend (Touch ID/Secure Enclave specifics). Both are wired below as separate
+# static libraries so the generated project tracks the real Package.swift dependency graph — Xcode
+# targets don't read Package.swift, so this duplication is unavoidable; keep the two in sync by hand.
+#
+#   cd packaging && xcodegen generate && xcodebuild -project CCTouchIDGate.xcodeproj -scheme cc-touch-id -configuration Release -allowProvisioningUpdates build
+name: CCTouchIDGate
+options:
+  bundleIdPrefix: com.seanperkins
+  deploymentTarget:
+    macOS: "13.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    DEVELOPMENT_TEAM: HH3SJBAS42
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_HARDENED_RUNTIME: YES
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+targets:
+  CCGateCore:
+    type: library.static
+    platform: macOS
+    sources:
+      - path: ../Sources/CCGateCore
+  CCTouchIDBackend:
+    type: library.static
+    platform: macOS
+    sources:
+      - path: ../Sources/CCTouchIDBackend
+    dependencies:
+      - target: CCGateCore
+        embed: false
+  cc-touch-id:
+    type: application
+    platform: macOS
+    sources:
+      - path: ../Sources/cc-touch-id
+    dependencies:
+      - target: CCGateCore
+        embed: false
+      - target: CCTouchIDBackend
+        embed: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.seanperkins.cc-touch-id
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_LSUIElement: YES              # background/CLI tool, no dock icon
+        INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.developer-tools"
+        CODE_SIGN_ENTITLEMENTS: CCTouchID.entitlements

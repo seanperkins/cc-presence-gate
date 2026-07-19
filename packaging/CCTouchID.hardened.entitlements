@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Hardened re-sign entitlements: keychain-access-groups WITHOUT com.apple.security.get-task-allow.
+     Literal team prefix (codesign does not expand $(AppIdentifierPrefix)). Dropping get-task-allow makes a
+     same-uid lldb/task_for_pid attach fail (TID-5). The development provisioning profile embedded in the .app
+     authorizes this (subset) entitlement set, so the binary still runs. Distribution to OTHER Macs needs a
+     Developer ID cert + notarization; this is local hardening only. -->
+<plist version="1.0">
+<dict>
+	<key>keychain-access-groups</key>
+	<array>
+		<string>HH3SJBAS42.com.seanperkins.cc-touch-id</string>
+	</array>
+</dict>
+</plist>

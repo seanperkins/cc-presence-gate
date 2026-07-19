@@ -11,8 +11,9 @@ public struct SignedDocument: Codable, Equatable {
     public let nonce: String
     public let callerUid: Int
     public let contentMode: String
+    public let ns: String?
     enum CodingKeys: String, CodingKey {
-        case v, op, path, cwd, nonce
+        case v, op, path, cwd, nonce, ns
         case contentSha256 = "content_sha256"
         case callerUid = "caller_uid"
         case contentMode = "content_mode"
@@ -20,9 +21,9 @@ public struct SignedDocument: Codable, Equatable {
 }
 public func buildSignedDocument(op: String, path: String, contentSha256: String, cwd: String,
                                 nonceHex: String, callerUid: Int,
-                                contentMode: String = "inline") -> SignedDocument {
+                                contentMode: String = "inline", ns: String? = nil) -> SignedDocument {
     SignedDocument(v: 1, op: op, path: path, contentSha256: contentSha256, cwd: cwd,
-                   nonce: nonceHex, callerUid: callerUid, contentMode: contentMode)
+                   nonce: nonceHex, callerUid: callerUid, contentMode: contentMode, ns: ns)
 }
 public func canonicalBytes<T: Encodable>(_ obj: T) throws -> Data {
     let enc = JSONEncoder()

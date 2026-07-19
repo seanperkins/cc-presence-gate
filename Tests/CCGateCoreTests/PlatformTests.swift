@@ -25,7 +25,8 @@ final class MockPlatform: Platform {
 final class MockEnroller: Enroller {
     var enrolled = false
     var removedHome: String?
-    func enrollPlan(home: String, index: Int) -> [[String]] { [["mock-keygen", "-f", "\(home)/.ccfido/gate_sk\(index)"]] }
+    func enroll(home: String, keys: Int, profile: GateProfile) throws {}
+    func positiveControl(home: String, profile: GateProfile) -> Bool { true }
     func isEnrolled(home: String) -> Bool { enrolled }
     func removeKeyMaterial(home: String) { removedHome = home }
 }

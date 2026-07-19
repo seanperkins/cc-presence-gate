@@ -131,3 +131,63 @@ not yet exercised on hardware; drive it via the `/cc-fido:install` skill.
 - **`/cc-fido:install` skill — the default-policy scope note is loosely worded** ("gates sensitive/home
   paths"): the default `allow_tier` is `__HOME__/**` (most of `$HOME` passes without a touch); only
   `sensitive_globs` (dotfiles/credentials/LaunchAgents) and non-home writes gate.
+
+## cc-touch-id packaging/install (Task 10 review)
+- **`installOrchestration`'s managed-hook binary is not profile-aware — `cc-touch-id install` writes
+  the WRONG hook command.** `installOrchestration` (`Sources/CCGateCore/Install.swift:16`) calls
+  `renderManagedSettings(hookCmd: profile.codeDir + "/" + profile.binaryName + " hook")` — i.e. the
+  PLAIN binary path. That's correct for `cc-fido` (a plain signed CLI does everything, including the
+  hook). For `cc-touch-id`, the hook process signs with the Secure Enclave key and needs the
+  keychain-access-group entitlement that only the provisioned `.app` bundle carries
+  (`Sources/CCTouchIDBackend/TouchIdConstants.swift touchIdAppBinary`) — the plain daemon binary is
+  amfid-killed the moment the hook tries to use the key. The shipped install path works around this:
+  `install/install.sh` finishes by calling `cc-touch-id _render-managed` directly (main.swift wires
+  that internal subcommand to `touchIdAppBinary`, not `profile.codeDir/binaryName`), overwriting
+  whatever `installOrchestration` wrote. Fail-closed (a broken hook just fails signing, doesn't bypass
+  the gate) but broken if anyone runs `sudo cc-touch-id install` directly instead of going through
+  `install/install.sh` — they'll get a managed-settings hook pointing at a binary that can never
+  complete a Touch ID signature. Deferred / Pillar-C-adjacent proper fix: make the managed-hook binary
+  profile-aware (e.g. a `hookBinaryPath` field on `GateProfile`, defaulting to
+  `codeDir/binaryName` for `cc-fido` and to `touchIdAppBinary` for `cc-touch-id`) so the `install`
+  subcommand alone is correct without the install.sh workaround.
+- **Developer-ID *distribution* is blocked on a provisioning profile for `keychain-access-groups`
+  (author-machine build ships instead).** The SE key needs the `keychain-access-groups` entitlement,
+  and macOS requires that entitlement be authorized by an embedded PROVISIONING PROFILE — it cannot be
+  self-asserted in a bare Developer ID signature (an entitled binary with no authorizing profile is
+  amfid-killed at launch, SIGKILL/137 — confirmed empirically). The only macOS profile available is the
+  **Development** wildcard profile, which mandates `com.apple.security.get-task-allow`. So the shipped
+  `packaging/build-signed.sh` produces an **author-machine** build: Xcode automatic signing (Developer
+  ID cert + Development profile + get-task-allow + keychain group) — it launches and can create/use the
+  SE key on the signing Mac, but is NOT notarized and runs only on Macs registered to team HH3SJBAS42.
+  Stripping `get-task-allow` / Developer-ID re-signing without a matching profile breaks it (SIGKILL).
+  **To ship true notarized distribution** (runs on any Mac, `get-task-allow` absent, TID-5 attach
+  resistance intact): create a **Developer ID provisioning profile** that authorizes
+  `keychain-access-groups` for App ID `com.seanperkins.cc-touch-id` (Apple Developer portal; may need a
+  support request — Developer-ID profiles for keychain sharing are not self-serve for all accounts),
+  embed it, sign with Developer ID (no get-task-allow), then notarize + staple. `packaging/
+  CCTouchID.distribution.entitlements` (literal team-prefixed group, no get-task-allow) is retained for
+  that future path.
+- **`ns` domain-separator is defined but NOT wired into the broker's challenge (defense-in-depth,
+  deferred).** SP2 added an optional `ns` field to `SignedDocument` (`Sources/CCGateCore/Canonical.swift`)
+  so a Secure-Enclave signature — raw P-256 over `canonicalBytes`, with no external namespace like
+  `ssh-keygen -n` — could carry a domain separator. But nothing sets it: `Broker` builds the challenge
+  via `buildSignedDocument(...)` without passing `ns`, so it stays nil for BOTH cc-fido and cc-touch-id.
+  Not a functional/security hole for the current setup — the per-op `nonce` already prevents replay, and
+  the two products use different keys, verifiers, sockets, and service accounts (a cc-fido signature can
+  never validate under cc-touch-id's verifier and vice-versa). To wire it: have `Broker` pass
+  `ns: profile.namespace` (`"cc-touch-id-gate/v1"` / a cc-fido equivalent). NOTE: this changes the
+  daemon's challenge bytes, so it needs a rebuild + reinstall + on-hardware re-validation of the gate.
+- **`status.keyEnrolled` may under-report when run from the plain binary (Minor, final review).**
+  `gatherStatus` sets `keyEnrolled = enroller.isEnrolled(home:)` → `seKeyExists(tag:)`, a keychain query.
+  The SE key lives in access group `HH3SJBAS42.com.seanperkins.cc-touch-id`, which only the entitled
+  `.app` binary belongs to. The install SKILL runs `status` from the plain `.build/release/cc-touch-id`,
+  which isn't in that group and may not see the key → the rollup can show `prereqs-only` after a real
+  enroll. Conservative (never OVER-reports enrollment), not security-relevant; misleads the guided flow.
+  Fix: probe enrollment for status via the app binary, or (as root) via a non-empty `allowed_signers`
+  check, rather than a keychain query from the plain binary.
+- **denyNudge points at `cc-touch-id write`, which can't sign from the plain binary (Minor).**
+  `denyNudgeMsg` (`HookLogic.swift`) emits ``Use `cc-touch-id write <path>` `` via `profile.binaryName`.
+  For Touch ID, `write`→`seSign` needs the entitled `.app` binary; bare `cc-touch-id` on PATH (if any)
+  would amfid-kill. Only reachable when a user populates `locked_paths` (shipped `policy.json` has it
+  empty) and fails closed. Same family as the plain-binary-hook residual. Fix: nudge the app-binary path
+  for the Touch ID profile.
