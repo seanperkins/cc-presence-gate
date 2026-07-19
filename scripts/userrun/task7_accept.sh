@@ -3,6 +3,14 @@
 # Exercises the live LaunchDaemon install end-to-end: dir-custody of the design's primary adversary
 # path, file-custody with broker-write-after-touch, the C-3 control-path denial, and audit integrity.
 set -u
+# Run as your LOGIN USER, not sudo. The script escalates internally where it needs root; the
+# "agent-uid cannot do X" checks (dir custody, direct-write EACCES, broker sign) are only valid
+# when they run unprivileged. Under an outer sudo, root bypasses the barriers and the client's
+# HOME becomes /var/root (no enrolled key) — producing false results.
+if [ "$(id -u)" = 0 ]; then
+  echo "ERROR: run this as your login user, NOT with sudo (it self-escalates internally)." >&2
+  exit 2
+fi
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 BIN=/opt/cc-fido-gate/cc-fido
 LA="$HOME/Library/LaunchAgents"
@@ -40,11 +48,12 @@ sudo grep -q __HOME__ /opt/cc-fido-gate/policy.json && fail "installed policy st
 sudo grep -q "\"$HOME/\*\*\"" /opt/cc-fido-gate/policy.json && pass "allow_tier substituted to \$HOME" || fail "allow_tier not substituted to \$HOME"
 sudo /opt/cc-fido-gate/cc-fido _validate-policy /opt/cc-fido-gate/policy.json >/dev/null && pass "installed policy validates" || fail "installed policy does not validate"
 
-echo "=== 7. a broken custom POLICY aborts install and leaves the good policy intact ==="
-GOOD_SHA=$(sudo shasum -a 256 /opt/cc-fido-gate/policy.json | cut -d' ' -f1)
+echo "=== 7. a broken custom policy is REJECTED by validation (read-only; no install side-effects) ==="
+# (Was a call to a since-removed task7_install.sh, which made this vacuously pass. Test the real
+# rejection logic via the read-only _validate-policy subcommand instead — same fail-closed parser
+# the installer runs, with no risk to the live policy.)
 printf '{"allow_tier":["("],"sensitive_globs":[],"locked_paths":[],"bash_advisory":["("],"mcp_allow":[]}' > /tmp/pol-bad.json
-POLICY=/tmp/pol-bad.json bash "$REPO/scripts/userrun/task7_install.sh" >/dev/null 2>&1 && fail "install accepted a broken policy" || pass "install rejected the broken policy"
-[ "$(sudo shasum -a 256 /opt/cc-fido-gate/policy.json | cut -d' ' -f1)" = "$GOOD_SHA" ] && pass "good policy left byte-for-byte intact" || fail "good policy was clobbered by a failed install"
+"$BIN" _validate-policy /tmp/pol-bad.json >/dev/null 2>&1 && fail "validation accepted a broken policy" || pass "broken policy rejected by _validate-policy"
 
 echo
 [ "$FAILED" = 0 ] && echo "RESULT: GREEN" || echo "RESULT: RED"

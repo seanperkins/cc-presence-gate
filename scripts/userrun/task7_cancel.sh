@@ -7,6 +7,13 @@
 #
 # [USER-RUN] Claude cannot run this: it needs sudo + you interacting with (declining) the dialog.
 set -u
+# Run as your LOGIN USER, not sudo: the client `cc-fido write` must run as you so it finds your
+# enrolled key (~/.ccfido). Under an outer sudo it runs as root (HOME=/var/root, no key) and would
+# "deny" for the wrong reason, invalidating the cancellation test. The script self-escalates internally.
+if [ "$(id -u)" = 0 ]; then
+  echo "ERROR: run this as your login user, NOT with sudo (it self-escalates internally)." >&2
+  exit 2
+fi
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 BIN=/opt/cc-fido-gate/cc-fido
 BENIGN=/Users/Shared/ccfido-cancel.txt
