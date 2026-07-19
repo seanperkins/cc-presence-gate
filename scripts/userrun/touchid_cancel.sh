@@ -6,22 +6,18 @@
 # successful touch. This is the runtime proof of TouchIdCeremony/TouchIDCanceller — the regression it
 # exists to kill is a ceremony that writes (or hangs forever) when the human declines or ignores it.
 #
-# DESIGN NOTE — read before running: unlike cc-fido's ceremony (an osascript dialog with its own
-# ~60s give-up and a ~90s hard backstop, both client-side and code-defined in FidoCeremony.swift),
-# the Touch ID ceremony has NO client-side backstop of its own. TouchIdCeremony.confirmAndSign
-# (Sources/CCTouchIDBackend/TouchIdCeremony.swift) calls seSign() straight into
-# SecKeyCreateSignature — the NATIVE macOS Touch ID sheet IS the presence ceremony; there is no app
-# code wrapping it with a timer. Cancellation for the Cancel case is the sheet's own Cancel button
-# (returns errSecUserCanceled immediately). For the give-up (walk-away) case, nothing in this
-# repo's Touch ID code enforces a timeout — the only CODE-DEFINED numeric backstop anywhere in the
-# path is the BROKER's (server-side, shared with cc-fido) wall-clock deadline:
+# DESIGN NOTE — read before running: the native macOS Touch ID sheet IS the presence ceremony, and it
+# has no give-up of its own — so TouchIdCeremony.confirmAndSign
+# (Sources/CCTouchIDBackend/TouchIdCeremony.swift) wraps seSign() with a CLIENT-SIDE give-up backstop:
+# it runs the sign on a background thread and, if the human neither touches nor cancels within
+# `TouchIdCeremony.giveUp` (60s), returns a denial. (It best-effort invalidates the LAContext to
+# dismiss the sheet, but that does not reliably abort a SecKeyCreateSignature on a fetched key, so it
+# denies at the deadline WITHOUT waiting for the sign thread; the process exits right after, tearing
+# down any lingering sheet.) The Cancel case resolves immediately via the sheet's own Cancel button
+# (errSecUserCanceled). The 60s client give-up sits under the BROKER's outer wall-clock deadline:
 #   Sources/CCGateCore/Broker.swift: `static let ceremonyDeadline: TimeInterval = 90`
-# which drops the daemon-side connection ~90s after the challenge was issued if no valid signature
-# has arrived. Whether the walked-away sheet resolves sooner than that is governed by macOS's own
-# (undocumented-in-this-repo) Touch ID sheet timeout, not by anything this codebase controls. So
-# "eventually denies" in the give-up case below is NOT a tight, code-guaranteed bound the way FIDO's
-# is — this script MEASURES the elapsed wall-clock time and reports it so the operator can see what
-# "eventually" actually means on this machine/OS version, rather than asserting a specific number.
+# So the give-up case below is expected to deny at ~60s (client backstop), not ~90s. This script still
+# MEASURES the elapsed time and reports it so any drift from that expectation is visible.
 #
 # [USER-RUN] Claude cannot run this: it needs sudo + you interacting with (declining, or ignoring)
 # the native Touch ID sheet.
@@ -39,8 +35,8 @@ CODE_DIR=/opt/cc-touch-id-gate
 BIN="$CODE_DIR/cc-touch-id"                                    # plain — no Secure Enclave access
 BIN_APP="$CODE_DIR/cc-touch-id.app/Contents/MacOS/cc-touch-id"   # entitled — required for `write` (signs)
 BENIGN=/Users/Shared/cctouchid-cancel.txt
-DAEMON_DEADLINE=90   # Broker.ceremonyDeadline (Sources/CCGateCore/Broker.swift) — the only code-defined
-                      # backstop in this path; shared with cc-fido, server-side, NOT a client timer.
+CLIENT_GIVEUP=60     # TouchIdCeremony.giveUp — the client-side walk-away backstop (deny-at-deadline).
+DAEMON_DEADLINE=90   # Broker.ceremonyDeadline — the outer server-side wall-clock deadline (shared w/ cc-fido).
 FAILED=0
 pass(){ echo "  PASS: $1"; }; fail(){ echo "  FAIL: $1"; FAILED=1; }
 
@@ -77,24 +73,23 @@ AFTER_MTIME=$(sudo stat -f %m "$BENIGN")
     || fail "target mtime CHANGED after Cancel (was $BEFORE_MTIME, now $AFTER_MTIME) — something touched the file!"
 
 echo
-echo "=== 2. GIVE-UP case — walk away, do NOTHING at all: no client-side timer exists for Touch ID ==="
+echo "=== 2. GIVE-UP case — walk away, do NOTHING: the client-side ${CLIENT_GIVEUP}s backstop should deny ==="
 echo ">>> A native Touch ID sheet will appear. Walk away / do NOTHING. Do NOT touch the sensor, do NOT click Cancel. <<<"
-echo ">>> This command will NOT return until either the sheet gives up on its own or the broker's <<<"
-echo ">>> ${DAEMON_DEADLINE}s ceremony deadline drops the connection — it may take up to roughly that long. <<<"
-echo ">>> If it appears to hang well past ~$((DAEMON_DEADLINE * 2))s, Ctrl-C and treat this as a FAIL to investigate <<<"
-echo ">>> (that would mean neither the sheet nor the broker deadline ever unblocked it). <<<"
+echo ">>> It should deny on its own at ~${CLIENT_GIVEUP}s (TouchIdCeremony.giveUp), under the ${DAEMON_DEADLINE}s broker deadline. <<<"
+echo ">>> If it appears to hang well past ~${DAEMON_DEADLINE}s, Ctrl-C and treat this as a FAIL to investigate <<<"
+echo ">>> (that would mean the client give-up backstop did not fire). <<<"
 B2_SUM=$(sudo shasum -a 256 "$BENIGN" | cut -d' ' -f1)
 B2_MTIME=$(sudo stat -f %m "$BENIGN")
 START2=$(date +%s)
 printf 'HOSTILE-GIVEUP' | "$BIN_APP" write "$BENIGN"; RC2=$?
 ELAPSED2=$(( $(date +%s) - START2 ))
 echo "  (write returned rc=$RC2 after ${ELAPSED2}s)"
-if [ "$ELAPSED2" -lt "$DAEMON_DEADLINE" ]; then
-  echo "  TIMING: resolved in ${ELAPSED2}s, before the ${DAEMON_DEADLINE}s broker deadline — the native Touch ID sheet's own timeout governed."
+if [ "$ELAPSED2" -lt $((CLIENT_GIVEUP + 15)) ]; then
+  echo "  TIMING: resolved in ${ELAPSED2}s — the client-side ${CLIENT_GIVEUP}s give-up backstop (TouchIdCeremony.giveUp) governed (expected)."
 elif [ "$ELAPSED2" -lt $((DAEMON_DEADLINE + 15)) ]; then
-  echo "  TIMING: resolved at ${ELAPSED2}s, right around the ${DAEMON_DEADLINE}s broker deadline — Broker.ceremonyDeadline governed."
+  echo "  TIMING: resolved at ${ELAPSED2}s, near the ${DAEMON_DEADLINE}s broker deadline — the ${CLIENT_GIVEUP}s client backstop may not have fired; investigate."
 else
-  echo "  TIMING: resolved at ${ELAPSED2}s, well past the ${DAEMON_DEADLINE}s broker deadline — unexpected; note this for follow-up."
+  echo "  TIMING: resolved at ${ELAPSED2}s, well past both backstops — unexpected; note this for follow-up."
 fi
 [ "$RC2" -ne 0 ] && pass "give-up denied the write (rc=$RC2 != 0)" || fail "write returned 0 on give-up — NOT denied"
 A2_SUM=$(sudo shasum -a 256 "$BENIGN" | cut -d' ' -f1)

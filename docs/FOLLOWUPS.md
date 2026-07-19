@@ -167,3 +167,13 @@ not yet exercised on hardware; drive it via the `/cc-fido:install` skill.
   embed it, sign with Developer ID (no get-task-allow), then notarize + staple. `packaging/
   CCTouchID.distribution.entitlements` (literal team-prefixed group, no get-task-allow) is retained for
   that future path.
+- **`ns` domain-separator is defined but NOT wired into the broker's challenge (defense-in-depth,
+  deferred).** SP2 added an optional `ns` field to `SignedDocument` (`Sources/CCGateCore/Canonical.swift`)
+  so a Secure-Enclave signature — raw P-256 over `canonicalBytes`, with no external namespace like
+  `ssh-keygen -n` — could carry a domain separator. But nothing sets it: `Broker` builds the challenge
+  via `buildSignedDocument(...)` without passing `ns`, so it stays nil for BOTH cc-fido and cc-touch-id.
+  Not a functional/security hole for the current setup — the per-op `nonce` already prevents replay, and
+  the two products use different keys, verifiers, sockets, and service accounts (a cc-fido signature can
+  never validate under cc-touch-id's verifier and vice-versa). To wire it: have `Broker` pass
+  `ns: profile.namespace` (`"cc-touch-id-gate/v1"` / a cc-fido equivalent). NOTE: this changes the
+  daemon's challenge bytes, so it needs a rebuild + reinstall + on-hardware re-validation of the gate.
