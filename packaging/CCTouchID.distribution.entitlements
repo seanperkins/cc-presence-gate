@@ -4,7 +4,7 @@
      keychain-access-groups uses the LITERAL team-prefixed form, not $(AppIdentifierPrefix) — that
      substitution is only performed by Xcode's build system, never by a bare `codesign` invocation, so
      a Developer-ID re-sign that used the Xcode-flavored token would embed the literal, unexpanded
-     string "$(AppIdentifierPrefix)com.mobilitylabs.cctouchid.app" and the Secure Enclave keychain
+     string "$(AppIdentifierPrefix)com.seanperkins.cc-touch-id" and the Secure Enclave keychain
      item would be unreachable at runtime.
      NO com.apple.security.get-task-allow key (TID-5): distribution builds must not be debuggable via
      same-uid task_for_pid/lldb attach. build-signed.sh greps the re-signed binary's entitlements and
@@ -14,7 +14,7 @@
 <dict>
 	<key>keychain-access-groups</key>
 	<array>
-		<string>HH3SJBAS42.com.mobilitylabs.cctouchid.app</string>
+		<string>HH3SJBAS42.com.seanperkins.cc-touch-id</string>
 	</array>
 </dict>
 </plist>

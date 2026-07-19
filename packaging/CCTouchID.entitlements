@@ -4,7 +4,7 @@
 <dict>
 	<key>keychain-access-groups</key>
 	<array>
-		<string>$(AppIdentifierPrefix)com.mobilitylabs.cctouchid.app</string>
+		<string>$(AppIdentifierPrefix)com.seanperkins.cc-touch-id</string>
 	</array>
 </dict>
 </plist>

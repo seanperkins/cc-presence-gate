@@ -8,7 +8,7 @@
 <dict>
 	<key>keychain-access-groups</key>
 	<array>
-		<string>HH3SJBAS42.com.mobilitylabs.cctouchid.app</string>
+		<string>HH3SJBAS42.com.seanperkins.cc-touch-id</string>
 	</array>
 </dict>
 </plist>

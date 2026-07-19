@@ -22,7 +22,7 @@ set -euo pipefail
 
 DEV_ID_IDENTITY="Developer ID Application: Sean Perkins (HH3SJBAS42)"
 NOTARY_PROFILE="cc-touch-id-notary"
-TEAM_PREFIXED_GROUP="HH3SJBAS42.com.mobilitylabs.cctouchid.app"
+TEAM_PREFIXED_GROUP="HH3SJBAS42.com.seanperkins.cc-touch-id"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"

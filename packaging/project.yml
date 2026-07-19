@@ -11,7 +11,7 @@
 #   cd packaging && xcodegen generate && xcodebuild -project CCTouchIDGate.xcodeproj -scheme cc-touch-id -configuration Release -allowProvisioningUpdates build
 name: CCTouchIDGate
 options:
-  bundleIdPrefix: com.mobilitylabs.cctouchid
+  bundleIdPrefix: com.seanperkins
   deploymentTarget:
     macOS: "13.0"
   createIntermediateGroups: true
@@ -49,7 +49,7 @@ targets:
         embed: false
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.mobilitylabs.cctouchid.app
+        PRODUCT_BUNDLE_IDENTIFIER: com.seanperkins.cc-touch-id
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_LSUIElement: YES              # background/CLI tool, no dock icon
         INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.developer-tools"
