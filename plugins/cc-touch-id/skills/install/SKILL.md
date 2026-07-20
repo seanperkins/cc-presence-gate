@@ -64,8 +64,24 @@ Step 1 (its default team check is `HH3SJBAS42`).
 path noted above.
 
 ## Always start by reading state
-Ask the user to run `$REPO_ROOT/.build/release/cc-touch-id status --json` (or run it yourself if
-unprivileged reads suffice) and parse the `rollup`. Branch:
+Ask the user to run `status --json` and parse the `rollup`. **Which binary you run it from matters
+once a key is enrolled:** `key_enrolled` comes from a keychain query for the Secure Enclave key, and
+that key lives in an access group only the entitled `.app` belongs to. The plain
+`.build/release/cc-touch-id` is not in that group, so it reports `key_enrolled:false` even when a key
+is genuinely enrolled — confirmed on a working install, where the same machine reported
+`key_enrolled:true` from the `.app` and `false` from the plain binary at the same moment. Depending on
+what else is true, that either drags the rollup down to `prereqs-only` (looping you back into
+re-enrolling a key that already exists) or leaves it `active` with a contradictory `key_enrolled:false`.
+
+- **Before Step 1 (nothing installed yet):** `$REPO_ROOT/.build/release/cc-touch-id status --json` —
+  the app isn't in place yet and there's no key to miss.
+- **After Step 2 (a key exists):** prefer
+  `/opt/cc-touch-id-gate/cc-touch-id.app/Contents/MacOS/cc-touch-id status --json`.
+
+If the two disagree on `key_enrolled`, believe the `.app`. The error is always conservative (it
+under-reports, never claims an enrollment that didn't happen), so a `prereqs-only` rollup from the
+plain binary right after a clean enroll means you're reading it from the wrong binary — not that the
+enroll failed. Branch:
 - `clean` → Step 1 (install)
 - `prereqs-only` → Step 2 (enroll)
 - `enrolled` → Step 3 (activate)
@@ -134,7 +150,8 @@ session, having the agent attempt a gated action (e.g. a Write to a `.env`) and 
 Touch ID / get denied.
 
 ## Verify
-`$REPO_ROOT/.build/release/cc-touch-id status` should read `active`. The full hardware gate acceptance
+`/opt/cc-touch-id-gate/cc-touch-id.app/Contents/MacOS/cc-touch-id status` should read `active` (use
+the `.app`, not the plain binary — see the `key_enrolled` note above). The full hardware gate acceptance
 is `scripts/userrun/touchid_accept.sh` (needs sudo + touches); `scripts/userrun/touchid_notarize_accept.sh`
 checks the installed app is the notarized distribution build.
 

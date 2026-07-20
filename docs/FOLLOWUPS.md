@@ -12,11 +12,12 @@ NotebookEdit (M3), plus the per-task review fixes already committed. The below s
   `enroll-dir` also captures its pre-enroll uid/mode, which it previously didn't. Rollback is
   idempotent no matter how far the plan got (`nouchg` on an unlocked target and a chown to the current
   uid are both no-ops). [SW]-verified only — the privileged failure path itself is USER-RUN.
-- **Task7 #4 — `enroll-file` follows symlinks inconsistently.** `lstat` captures the *symlink's* uid
-  but `chown`/`chmod`/`chflags` follow to the target. An agent could plant a symlink and induce the
-  admin to enroll it, chowning/locking the target; rollback would restore the wrong uid. Does NOT
-  break C-1/C-3 (no agent write to a trust anchor). Fix: reject or `-h`/O_NOFOLLOW-resolve `path`
-  consistently before use.
+- **Task7 #4 — `enroll-file` follows symlinks inconsistently — RESOLVED (2026-07-19, `34f3725`).**
+  Enrollment now REFUSES a symlink outright rather than trying to resolve it consistently: `isSymlink`
+  (lstat-based, so it also catches dangling links a `stat` check would miss) plus a `refuseSymlink`
+  guard that runs before the metadata capture in both enroll paths of both binaries. The operator must
+  name the resolved target. Verified against the built binary — symlink-to-file, dangling symlink and
+  symlink-to-directory all refused with rc=1 before any privileged step, target metadata untouched.
 
 ## Audit completeness
 - **M1 — a successful privileged write can complete with no audit record — PARTIALLY RESOLVED
@@ -29,7 +30,19 @@ NotebookEdit (M3), plus the per-task review fixes already committed. The below s
   write-ahead intent record or a sentinel would close that. Also note the full path (a real ceremony
   against a service-account-owned target) needs root + a touch, so it is USER-RUN, not `swift test`.
 - **Task6 — hook-level denials leave no audit entry** (broker-side denials log `deny_target`/`deny`).
-  An operator can't see *why* a tool was blocked at the hook tier.
+  An operator can't see *why* a tool was blocked at the hook tier. **Deliberately NOT fixed the
+  obvious way — doing so naively would make the audit log worse, not better.** The hook runs as the
+  login user and cannot write the log directly (`/var/<keydir>` is `drwx------` service-account-owned,
+  by design), so a hook-tier record would have to travel over the broker socket — which is mode
+  **0666**, because auth is by *touch*, not caller identity. An unauthenticated "append this entry"
+  op therefore hands every local process, **including the agent the gate exists to constrain**, the
+  ability to forge audit entries or flood the log to bury real ones. That trades a completeness gap
+  for an integrity hole in the one artifact meant to be tamper-evident. Note the scope is narrower
+  than it first reads: "touch not provided" denials already reach the broker and ARE logged; only
+  `.denyNudge` (locked path, decided entirely hook-side) and hook-side errors (unreadable payload,
+  missing policy) go unrecorded. A real fix needs the entry to be attributable — e.g. the broker
+  deriving it from state it can verify itself, or a separate append-only channel the agent can't
+  reach — not a plain socket op. Left open pending that design.
 
 ## Hardening / latent
 - **Task3 — same-path concurrent `uchgWrite` can race** (introduced when the ceremony-wide flock was
@@ -248,7 +261,15 @@ not yet exercised on hardware; drive it via the `/cc-fido:install` skill.
   never validate under cc-touch-id's verifier and vice-versa). To wire it: have `Broker` pass
   `ns: profile.namespace` (`"cc-touch-id-gate/v1"` / a cc-fido equivalent). NOTE: this changes the
   daemon's challenge bytes, so it needs a rebuild + reinstall + on-hardware re-validation of the gate.
-- **`status.keyEnrolled` may under-report when run from the plain binary (Minor, final review).**
+- **`status.keyEnrolled` under-reports when run from the plain binary — CONFIRMED on hardware
+  (2026-07-19); skill worked around, code fix still open.** Measured on a live, working install: the
+  same machine at the same moment reported `key_enrolled:true` from
+  `cc-touch-id.app/Contents/MacOS/cc-touch-id` and `key_enrolled:false` from
+  `.build/release/cc-touch-id` (rollup `active` in both, so here it surfaced as a self-contradictory
+  status rather than a downgraded rollup). The install skill now tells the operator to read `status`
+  from the `.app` once a key exists, and to believe the `.app` when they disagree. The code-level fix
+  below (probe via the app binary, or check `allowed_signers` as root) is NOT done — the plain binary
+  still reports a misleading value to anyone who runs it directly. Original entry follows.
   `gatherStatus` sets `keyEnrolled = enroller.isEnrolled(home:)` → `seKeyExists(tag:)`, a keychain query.
   The SE key lives in access group `HH3SJBAS42.com.seanperkins.cc-touch-id`, which only the entitled
   `.app` binary belongs to. The install SKILL runs `status` from the plain `.build/release/cc-touch-id`,
@@ -256,7 +277,12 @@ not yet exercised on hardware; drive it via the `/cc-fido:install` skill.
   enroll. Conservative (never OVER-reports enrollment), not security-relevant; misleads the guided flow.
   Fix: probe enrollment for status via the app binary, or (as root) via a non-empty `allowed_signers`
   check, rather than a keychain query from the plain binary.
-- **denyNudge points at `cc-touch-id write`, which can't sign from the plain binary (Minor).**
+- **denyNudge points at `cc-touch-id write`, which can't sign from the plain binary — RESOLVED
+  (2026-07-19, `d777c80`).** `denyNudgeMsg` now names `profile.signingBinary` (the GateProfile field
+  formerly called `hookBinary`, renamed because it is not hook-specific — it is "the binary that can
+  perform a signing ceremony", used by both the managed hook command and this nudge). For cc-touch-id
+  that resolves to the entitled `.app`; for cc-fido it yields the full `/opt` path, which is also
+  better than a bare name that may not be on PATH. Original entry follows.
   `denyNudgeMsg` (`HookLogic.swift`) emits ``Use `cc-touch-id write <path>` `` via `profile.binaryName`.
   For Touch ID, `write`→`seSign` needs the entitled `.app` binary; bare `cc-touch-id` on PATH (if any)
   would amfid-kill. Only reachable when a user populates `locked_paths` (shipped `policy.json` has it
