@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 
 public enum InstallError: Error { case notRoot, failed(String) }
 
@@ -105,5 +106,12 @@ public func uninstall(platform: Platform, enrolledTargets: [String], home: Strin
 }
 func loginOwner(home: String) -> String {
     let user = (home as NSString).lastPathComponent
+    // Derive the user's real primary group so `chown user:group` restores the correct ownership
+    // after uninstall (rather than always using the hardcoded "staff" fallback).
+    if let pw = getpwnam(user),
+       let gr = getgrgid(pw.pointee.pw_gid),
+       let grName = String(validatingUTF8: gr.pointee.gr_name) {
+        return "\(user):\(grName)"
+    }
     return "\(user):staff"
 }

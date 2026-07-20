@@ -22,6 +22,25 @@ final class InstallTests: XCTestCase {
         XCTAssertTrue(p.calls.contains("activateDaemon"))
     }
 
+    func testLoginOwnerFallsBackForNonexistentUser() {
+        // A user that definitely doesn't exist → must fall back to :staff
+        XCTAssertEqual(loginOwner(home: "/Users/no-such-user-xyzzy-99999"), "no-such-user-xyzzy-99999:staff")
+    }
+    func testLoginOwnerUsesRealPrimaryGroup() {
+        // The current user exists — verify the returned group is non-empty and matches getpwnam.
+        let home = NSHomeDirectory()
+        let user = (home as NSString).lastPathComponent
+        let result = loginOwner(home: home)
+        // Format: "user:group"
+        XCTAssertTrue(result.hasPrefix("\(user):"), "expected '\(user):…' but got '\(result)'")
+        let group = String(result.dropFirst("\(user):".count))
+        XCTAssertFalse(group.isEmpty, "group name must not be empty")
+        // Cross-check: group must match what getpwnam → getgrgid gives
+        if let pw = getpwnam(user), let gr = getgrgid(pw.pointee.pw_gid),
+           let expectedGroup = String(validatingUTF8: gr.pointee.gr_name) {
+            XCTAssertEqual(group, expectedGroup, "loginOwner returned '\(group)' but getgrgid gives '\(expectedGroup)'")
+        }
+    }
     func testUninstallUnlocksTargetsThenTearsDown() throws {
         let p = MockPlatform(); p.accountExists = true; p.daemon = (true, true, 9)
         let enroller = MockEnroller()
