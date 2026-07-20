@@ -19,6 +19,31 @@ final class CustodyTests: XCTestCase {
         let target = base + "/sub/secret"; FileManager.default.createFile(atPath: target, contents: Data("x".utf8))
         XCTAssertTrue(checkAncestors(target, safeOwners: [0]).contains(base))
     }
+    func testIsSymlinkDistinguishesLinkFromTargetAndMissing() throws {
+        let base = NSTemporaryDirectory() + "sym-\(UUID().uuidString)"
+        try FileManager.default.createDirectory(atPath: base, withIntermediateDirectories: true)
+        let real = base + "/real.txt", link = base + "/link.txt", dir = base + "/d", dlink = base + "/dlink"
+        FileManager.default.createFile(atPath: real, contents: Data("x".utf8))
+        try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(atPath: link, withDestinationPath: real)
+        try FileManager.default.createSymbolicLink(atPath: dlink, withDestinationPath: dir)
+        XCTAssertTrue(isSymlink(link), "a symlink to a file must be detected")
+        XCTAssertTrue(isSymlink(dlink), "a symlink to a directory must be detected")
+        XCTAssertFalse(isSymlink(real), "a regular file is not a symlink")
+        XCTAssertFalse(isSymlink(dir), "a directory is not a symlink")
+        XCTAssertFalse(isSymlink(base + "/nope"), "a missing path is not a symlink")
+    }
+    func testIsSymlinkDetectsDanglingLink() throws {
+        // The inducement case: the link resolves to nothing (or to a file the operator can't see),
+        // so a stat()-based check would miss it while chown/chmod would still follow.
+        let base = NSTemporaryDirectory() + "sym2-\(UUID().uuidString)"
+        try FileManager.default.createDirectory(atPath: base, withIntermediateDirectories: true)
+        let dangling = base + "/dangling"
+        try FileManager.default.createSymbolicLink(atPath: dangling, withDestinationPath: base + "/does-not-exist")
+        XCTAssertTrue(isSymlink(dangling))
+        var st = stat()
+        XCTAssertNotEqual(stat(dangling, &st), 0, "stat() follows and fails — only lstat sees the link")
+    }
     func testRegistryRoundTrip() throws {
         let p = NSTemporaryDirectory() + "custody-\(UUID().uuidString).json"
         try CustodyRegistry.add(file: "/a/b", dir: nil, path: p)

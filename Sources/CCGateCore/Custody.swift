@@ -8,6 +8,17 @@ public func planEnrollFile(_ path: String, mode: Int, profile: GateProfile) -> [
 public func planEnrollDir(_ path: String, profile: GateProfile) -> [[String]] {
     [["/usr/sbin/chown", profile.serviceAccount, path], ["/bin/chmod", "755", path]]
 }
+/// True if `path` is itself a symlink (no follow). Enrollment must REFUSE these: the pre-enroll
+/// `lstat` captures the LINK's uid+mode, but `chown`/`chmod`/`chflags` all follow to the target — so
+/// enrolling a symlink re-owns and locks the target while a rollback would restore the link's
+/// metadata instead, leaving the target service-account-owned. It is also an inducement vector: an
+/// agent that can plant a symlink could get an admin to enroll (and hand custody of) an arbitrary
+/// file. Callers fail closed and make the operator name the resolved path.
+public func isSymlink(_ path: String) -> Bool {
+    var st = stat()
+    return lstat(path, &st) == 0 && (st.st_mode & S_IFMT) == S_IFLNK
+}
+
 /// Ancestors NOT owned by a safe principal OR group/other-writable (agent could swap them). lstat: no follow.
 public func checkAncestors(_ path: String, safeOwners: Set<Int>) -> [String] {
     var bad: [String] = []

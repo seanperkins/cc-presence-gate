@@ -27,6 +27,14 @@ func warnAncestors(_ path: String) {
 /// caller must roll back the partial state, because a plan that dies midway (e.g. chown OK, chmod
 /// fails) leaves the file service-account-owned, unlocked and unregistered: the user can no longer
 /// write it and the gate isn't protecting it either.
+/// Fail closed on a symlink target — see `isSymlink`. Must run BEFORE the pre-enroll lstat capture,
+/// because that capture would otherwise record the link's uid/mode as the rollback state.
+func refuseSymlink(_ path: String) {
+    guard isSymlink(path) else { return }
+    try? FileHandle.standardError.write(contentsOf: Data(
+        "cc-touch-id: refusing to enroll a symlink: \(path)\n  chown/chmod/chflags follow it to the target — pass the resolved target path instead\n".utf8))
+    exit(1)
+}
 func enrollSteps(_ plan: [[String]]) -> [String]? {
     for a in plan where !runPrivileged(a) { return a }
     return nil
@@ -188,6 +196,7 @@ case "enroll-file":
     guard args.count >= 2 else { usage() }
     let path = (args[1] as NSString).standardizingPath
     let mode = args.count > 2 ? (Int(args[2], radix: 8) ?? 0o600) : 0o600
+    refuseSymlink(path)   // before the capture below — lstat would record the LINK's uid/mode
     warnAncestors(path)
     var pre = stat(); let hadStat = lstat(path, &pre) == 0    // capture owner+mode BEFORE enroll
     let origUID = hadStat ? pre.st_uid : getuid()
@@ -207,6 +216,7 @@ case "enroll-file":
 case "enroll-dir":
     guard args.count >= 2 else { usage() }
     let path = (args[1] as NSString).standardizingPath
+    refuseSymlink(path)   // before the capture below — lstat would record the LINK's uid/mode
     warnAncestors(path)
     var dpre = stat(); let dHadStat = lstat(path, &dpre) == 0   // capture owner+mode BEFORE enroll
     let dOrigUID = dHadStat ? dpre.st_uid : getuid()
