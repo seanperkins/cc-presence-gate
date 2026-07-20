@@ -6,13 +6,17 @@
 # drives this same sequence one step at a time with explanations. This script is the scriptable
 # equivalent for repeat/CI-style installs.
 #
-# Why this script exists rather than just `sudo cc-touch-id install`: the built-in `install`
-# subcommand (Sources/CCGateCore/Install.swift installOrchestration) copies the PLAIN daemon binary
-# and writes a generic hook command (codeDir/binaryName). That is correct for the daemon (verify-only,
-# no Secure Enclave access needed) but WRONG for the hook: the hook process signs with the Secure
-# Enclave key, which requires the keychain-access-group entitlement that only the provisioned/notarized
-# `.app` bundle carries (see Sources/CCTouchIDBackend/TouchIdConstants.swift touchIdAppBinary). So this
-# script layers the `.app` install and the correct app-binary hook wiring on top of the subcommand.
+# Why this script exists rather than just `sudo cc-touch-id install`: it installs the entitled `.app`
+# bundle (verifying its signature/team first) — the subcommand only ever places the PLAIN daemon
+# binary, and the hook/enroll/write roles cannot run from that one, since signing with the Secure
+# Enclave key needs the keychain-access-group entitlement only the provisioned bundle carries (see
+# Sources/CCTouchIDBackend/TouchIdConstants.swift touchIdAppBinary).
+#
+# NOTE: the subcommand no longer writes the WRONG hook command. `installOrchestration` now renders
+# `profile.signingBinary`, which touchIdProfile sets to the .app binary, so `sudo cc-touch-id install`
+# wires the hook correctly on its own. This script's trailing `_render-managed` call is therefore
+# belt-and-braces rather than a required correction — and a daemon-only update (e.g. after changing
+# broker code, with the .app unchanged) can be done with the subcommand alone.
 set -eu -o pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
