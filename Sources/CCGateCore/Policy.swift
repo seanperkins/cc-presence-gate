@@ -23,12 +23,12 @@ public struct Policy {
     let lockedPaths: Set<String>
     let bashAdvisory: [NSRegularExpression]
     let mcpAllow: Set<[String]>
-    // Single public initializer matching the interface list: bashAdvisory is raw patterns.
-    // Force-compiled here because this direct constructor is for hardcoded call sites (tests, literals);
-    // untrusted input must go through fromDict/fromFile, which validate each pattern before ever
-    // reaching this initializer, so the force-try below cannot crash on that path.
-    public init(sensitiveGlobs: [String], allowTier: [String], lockedPaths: [String],
-                bashAdvisory: [String], mcpAllow: [[String]]) {
+    // Internal initializer for hardcoded call sites (tests, literals).
+    // Untrusted input MUST go through fromDict/fromFile, which validate each regex pattern before
+    // reaching this point — so force-try below cannot crash on that path.
+    // Internal (not public) so external code cannot accidentally pass raw unvalidated strings.
+    init(sensitiveGlobs: [String], allowTier: [String], lockedPaths: [String],
+         bashAdvisory: [String], mcpAllow: [[String]]) {
         self.sensitiveGlobs = sensitiveGlobs; self.allowTier = allowTier
         self.lockedPaths = Set(lockedPaths.map { matchPath($0, cwd: "/") })
         self.bashAdvisory = bashAdvisory.map { try! NSRegularExpression(pattern: $0) }

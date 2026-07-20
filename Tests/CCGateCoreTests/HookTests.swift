@@ -3,7 +3,7 @@ import Foundation
 @testable import CCGateCore
 
 final class HookTests: XCTestCase {
-    let pol = try! Policy(sensitiveGlobs: ["**/.env*"], allowTier: ["/Users/sean/proj/**"],
+    let pol = Policy(sensitiveGlobs: ["**/.env*"], allowTier: ["/Users/sean/proj/**"],
                           lockedPaths: ["/var/ccfido/target.txt"], bashAdvisory: [#"git push .*-f\b"#], mcpAllow: [])
     private func run(_ e: [String: Any], _ approve: @escaping (String, [String: Any], String) -> Bool)
         -> (Int32, String, String) {
@@ -21,6 +21,20 @@ final class HookTests: XCTestCase {
     func testGateAllows() { let r = run(ev("Write", ["file_path": "/Users/sean/proj/.env"]), { _,_,_ in true }); XCTAssertEqual(r.0, 0); XCTAssertTrue(r.1.contains("\"permissionDecision\":\"allow\"")) }
     func testGateDenies() { XCTAssertEqual(run(ev("Write", ["file_path": "/Users/sean/proj/.env"]), { _,_,_ in false }).0, 2) }
     func testBrokerErrorFailsClosed() { XCTAssertEqual(run(ev("Bash", ["command": "git push -f"], "/"), { _,_,_ in false }).0, 2) }
+    func testDecideAndEmitWithBrokenErrPipeDoesNotCrash() {
+        // Regression: FileHandle.write(Data) raises an uncatchable NSException on EPIPE;
+        // write(contentsOf:) throws a catchable Swift error. Verify that writing to a broken
+        // read-end pipe does not crash the process.
+        signal(SIGPIPE, SIG_IGN)
+        let pipe = Pipe()
+        try? pipe.fileHandleForReading.close()  // break the pipe
+        let rc = decideAndEmit(
+            event: ev("Write", ["file_path": "/var/ccfido/target.txt"], "/"),
+            policy: pol, profile: testProfile,
+            out: FileHandle.standardOutput, err: pipe.fileHandleForWriting,
+            approve: { _, _, _ in false })
+        XCTAssertEqual(rc, 2, "denyNudge must return 2 even when err is a broken pipe")
+    }
     func testScrubDrops() {
         let c = scrubEnv(["NODE_OPTIONS": "x", "DYLD_INSERT_LIBRARIES": "y", "SSH_SK_HELPER": "z", "BASH_ENV": "e", "PATH": "/evil", "HOME": "/Users/sean"])
         XCTAssertNil(c["NODE_OPTIONS"]); XCTAssertNil(c["DYLD_INSERT_LIBRARIES"]); XCTAssertNil(c["SSH_SK_HELPER"]); XCTAssertNil(c["BASH_ENV"])
