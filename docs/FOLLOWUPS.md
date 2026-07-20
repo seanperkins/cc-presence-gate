@@ -6,11 +6,12 @@ was hardware-verified). Fixed inline before merge: audit EINTR retry (M2), hook 
 NotebookEdit (M3), plus the per-task review fixes already committed. The below ship as tracked issues.
 
 ## Highest value (real user-facing consequences)
-- **Task7 #1 — partial-enroll leaves a broken state.** `enrollSteps` (`Sources/cc-fido/main.swift`)
-  `exit(1)`s the moment any step of `planEnrollFile` (chown→chmod→chflags) fails. If chown succeeds
-  but chmod fails, the file is re-owned to `_ccfido`, not locked, not registered, and NOT rolled back.
-  Fix: track plan progress and roll back on partial failure (the registry-add-failure path already
-  has `rollbackFileLock`).
+- **Task7 #1 — partial-enroll leaves a broken state — RESOLVED (2026-07-19, `bd1ea56`).** `enrollSteps`
+  now returns the failed step instead of `exit(1)`ing, and both `enroll-file` and `enroll-dir` roll
+  back through the existing `rollbackFileLock` (captured original uid+mode) before exiting non-zero.
+  `enroll-dir` also captures its pre-enroll uid/mode, which it previously didn't. Rollback is
+  idempotent no matter how far the plan got (`nouchg` on an unlocked target and a chown to the current
+  uid are both no-ops). [SW]-verified only — the privileged failure path itself is USER-RUN.
 - **Task7 #4 — `enroll-file` follows symlinks inconsistently.** `lstat` captures the *symlink's* uid
   but `chown`/`chmod`/`chflags` follow to the target. An agent could plant a symlink and induce the
   admin to enroll it, chowning/locking the target; rollback would restore the wrong uid. Does NOT
@@ -18,11 +19,15 @@ NotebookEdit (M3), plus the per-task review fixes already committed. The below s
   consistently before use.
 
 ## Audit completeness
-- **M1 — a successful privileged write can complete with no audit record.** `Broker.uchgWrite`
-  writes+relocks, *then* `auditAppend("write_ok")`; if the append throws, `handle` throws and
-  `handleGuarded` drops it — durable write logged as neither ok nor error, client sees spurious
-  failure. Not a security bypass (touch verified). M2 (EINTR retry, fixed) removes the likely trigger.
-  Consider audit-before-relock or a write-happened sentinel.
+- **M1 — a successful privileged write can complete with no audit record — PARTIALLY RESOLVED
+  (2026-07-19, `1b9bbef`).** The *misreport* half is fixed: `handleExecuteWrite` now catches the
+  `auditAppend("write_ok")` failure instead of letting it propagate (where `handleGuarded` dropped it
+  and the client saw a spurious failure for a durable write). The result stays `ok` — the write is a
+  fact by then — and the gap surfaces as an explicit `audit_error` field, which `runWrite` prints as a
+  WARNING. `Broker.writeResult(auditError:)` is extracted so the invariant is unit-tested.
+  **Still open:** the record itself is still lost when the append fails — nothing replays it. A
+  write-ahead intent record or a sentinel would close that. Also note the full path (a real ceremony
+  against a service-account-owned target) needs root + a touch, so it is USER-RUN, not `swift test`.
 - **Task6 — hook-level denials leave no audit entry** (broker-side denials log `deny_target`/`deny`).
   An operator can't see *why* a tool was blocked at the hook tier.
 
@@ -34,15 +39,17 @@ NotebookEdit (M3), plus the per-task review fixes already committed. The below s
   real write barrier, so no agent-writable window opens; the loser gets a spurious `write_error` and the
   target is always left relocked. Only the audit chain's RMW is serialized (its own flock). Fix if ever
   needed: a per-path write lock around `uchgWrite`. Pathological for a single-user tool.
-- **Task5 — `Policy.init` is `public` + `try!`-on-regex.** Safe today (only `fromDict`/tests reach it;
-  untrusted input validates first). Landmine if future code builds `Policy` from raw strings. Fix:
-  make the non-throwing init `internal`.
-- **Task6 — `FileHandle.write(Data)` can raise an uncatchable `NSException` on EPIPE** → crash instead
-  of fail-closed (pre-existing house style, also in `main.swift`). SIGPIPE is ignored so this is
-  theoretical on the hook path. Fix: `write(contentsOf:)` + `try?`, or raw `write(2)`.
-- **Task4 — `custody.json` read-modify-write is not locked.** Concurrent `enroll-*` could drop an
-  entry (last-writer-wins on the whole file). Low risk: enrollment is serial admin. Fix: flock the
-  registry file across the RMW.
+- **Task5 — `Policy.init` is `public` + `try!`-on-regex — RESOLVED (2026-07-19, `39b9261`).** The
+  non-throwing init is now `internal`, so only `fromDict`/`fromFile` (which validate every pattern
+  first) and `@testable` call sites can reach it. External code can no longer hand it a raw string.
+- **Task6 — `FileHandle.write(Data)` can raise an uncatchable `NSException` on EPIPE — RESOLVED
+  (2026-07-19, `a33717f`).** Every stderr/stdout write site in `CCGateCore` (`Client`, `HookLogic`)
+  and both CLI entry points now uses `try? FileHandle.write(contentsOf:)`, which throws a catchable
+  Swift error instead of trapping. Regression test: `decideAndEmit` against a broken err pipe returns
+  2 without crashing.
+- **Task4 — `custody.json` read-modify-write is not locked — RESOLVED (2026-07-19, `94ee337`).**
+  `CustodyRegistry.add` now takes an advisory `flock(LOCK_EX)` across the RMW. Regression test: 20
+  concurrent adds all survive.
 - **Task6 review — directory-enrolled targets: uninstall vs. broker write-authorization scope
   mismatch.** `uninstall` unlocks registered dir paths (`registry.dirs`) via `clearImmutable`, but
   the broker's write-authorization (`Broker.loadRegistry()`) is files-only, exact-path match.
@@ -126,15 +133,22 @@ not yet exercised on hardware; drive it via the `/cc-fido:install` skill.
   opendirectoryd hasn't propagated the new account name yet; self-heals on an idempotent re-run.
 - **`enroll` — `chmod 700`/`600` return values discarded** (best-effort hardening; `ssh-keygen`
   already writes the private key `0600`).
-- **`uninstall` — `loginOwner` hardcodes group `:staff`** vs the retired shell's `id -gn`. Correct for
-  a standard macOS account (primary group `staff`, gid 20); wrong for a non-standard primary group.
+- **`uninstall` — `loginOwner` hardcodes group `:staff` — RESOLVED (2026-07-19, `62e2be7`).** Now
+  derives the real primary group (`getpwnam` → `pw_gid` → `getgrgid` → `gr_name`), falling back to
+  `staff` when the user doesn't exist or the lookup fails.
 - **`/cc-fido:install` skill — the default-policy scope note is loosely worded** ("gates sensitive/home
   paths"): the default `allow_tier` is `__HOME__/**` (most of `$HOME` passes without a touch); only
   `sensitive_globs` (dotfiles/credentials/LaunchAgents) and non-home writes gate.
 
 ## cc-touch-id packaging/install (Task 10 review)
-- **`installOrchestration`'s managed-hook binary is not profile-aware — `cc-touch-id install` writes
-  the WRONG hook command.** `installOrchestration` (`Sources/CCGateCore/Install.swift:16`) calls
+- **`installOrchestration`'s managed-hook binary is not profile-aware — RESOLVED (2026-07-19,
+  `3b6c2a1`).** `GateProfile` gained an optional `hookBinary` (defaulting to `codeDir/binaryName`);
+  `touchIdProfile` sets it to `touchIdAppBinary`, and `installOrchestration` plus both
+  `_render-managed` subcommands now read it, so the hook path has one source of truth per product and
+  `sudo cc-touch-id install` is correct standalone — no longer dependent on `install.sh`'s trailing
+  `_render-managed` overwrite (which is retained, harmlessly, as belt-and-braces). Renders
+  byte-identical to what install.sh already produced, so existing installs were unaffected.
+  Original report follows. `installOrchestration` (`Sources/CCGateCore/Install.swift:16`) called
   `renderManagedSettings(hookCmd: profile.codeDir + "/" + profile.binaryName + " hook")` — i.e. the
   PLAIN binary path. That's correct for `cc-fido` (a plain signed CLI does everything, including the
   hook). For `cc-touch-id`, the hook process signs with the Secure Enclave key and needs the
