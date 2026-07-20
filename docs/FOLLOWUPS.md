@@ -228,8 +228,18 @@ not yet exercised on hardware; drive it via the `/cc-fido:install` skill.
   prompt, no TTY); or (B) split the privileged registration into a separate shell-invoked
   `sudo cc-touch-id _register …` step; or (C) have `enroll` pre-flight a single up-front auth instead of
   a mid-flow prompt. Deferred — the `sudo -v` bridge is the current answer.
-- **`ns` domain-separator is defined but NOT wired into the broker's challenge (defense-in-depth,
-  deferred).** SP2 added an optional `ns` field to `SignedDocument` (`Sources/CCGateCore/Canonical.swift`)
+- **`ns` domain-separator wired into the broker's challenge — RESOLVED IN CODE, PENDING HARDWARE
+  RE-VALIDATION (2026-07-19).** Both `Broker` call sites (`handleExecuteWrite` and `decideApprove`)
+  now pass `ns: profile.namespace`, so every challenge carries its product's domain separator.
+  Blast radius is smaller than this entry originally assumed: `buildSignedDocument`/`canonicalBytes`
+  are called **only** in `Broker.swift`, and the client signs the opaque `challenge: Data` it receives
+  rather than reconstructing the document — so the daemon both builds and verifies the bytes, and the
+  change is self-consistent within one binary. Consequences: the **published, SHA-256-pinned `.app`
+  needs no republish** (it never sees the document), and there is no mixed-version incompatibility;
+  only the plain daemon binary must be rebuilt + reinstalled. **Still required before trusting it:**
+  reinstall the daemon and re-run `scripts/userrun/touchid_accept.sh` (sudo + a real touch) — the
+  challenge bytes changed and no automated test covers a live ceremony.
+  Original entry follows. SP2 added an optional `ns` field to `SignedDocument` (`Sources/CCGateCore/Canonical.swift`)
   so a Secure-Enclave signature — raw P-256 over `canonicalBytes`, with no external namespace like
   `ssh-keygen -n` — could carry a domain separator. But nothing sets it: `Broker` builds the challenge
   via `buildSignedDocument(...)` without passing `ns`, so it stays nil for BOTH cc-fido and cc-touch-id.

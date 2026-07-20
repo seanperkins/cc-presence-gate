@@ -168,7 +168,8 @@ public final class Broker {
         let doc = buildSignedDocument(op: "execute-write", path: norm,
                                       contentSha256: sha256Hex(content),
                                       cwd: req["cwd"] as? String ?? "", nonceHex: nonce, callerUid: caller,
-                                      contentMode: content.count > INLINE_MAX ? "digest" : "inline")
+                                      contentMode: content.count > INLINE_MAX ? "digest" : "inline",
+                                      ns: profile.namespace)
         let challenge = try canonicalBytes(doc)
         try sendMsg(fd, ["phase": "challenge", "challenge_b64": challenge.base64EncodedString(),
                          "human_rendering": humanRendering(doc, content: content)])
@@ -263,7 +264,7 @@ extension Broker {
         let doc = buildSignedDocument(op: "approve", path: tool, contentSha256: sha256Hex(payload),
                                       cwd: cwd,
                                       nonceHex: (0..<16).map { _ in String(format:"%02x", UInt8.random(in:0...255)) }.joined(),
-                                      callerUid: caller)
+                                      callerUid: caller, ns: profile.namespace)
         // humanRendering already prints "APPROVE <tool>" (doc.op/doc.path) — don't double it (round-2 cosmetic).
         let human = humanRendering(doc, content: payload)
         return (try canonicalBytes(doc).base64EncodedString(), human, doc)

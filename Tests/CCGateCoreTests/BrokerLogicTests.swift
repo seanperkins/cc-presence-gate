@@ -8,6 +8,34 @@ struct StubVerifier: Verifier {
 }
 
 final class BrokerLogicTests: XCTestCase {
+    // --- ns domain separator: defined on SignedDocument AND actually wired by the broker ---
+    func testApproveChallengeCarriesTheProfileNamespace() throws {
+        let b = Broker(profile: testProfile, verifier: StubVerifier())
+        let (_, _, doc) = try b.decideApprove(["tool": "Bash", "input": ["command": "ls"], "cwd": "/tmp"], caller: 501)
+        XCTAssertEqual(doc.ns, testProfile.namespace,
+                       "broker must stamp the profile namespace into the signed document")
+    }
+    func testTwoProfilesProduceDifferentChallengeBytesForTheSameRequest() throws {
+        // Domain separation: the same logical request under two products must not canonicalize to the
+        // same bytes, so a signature over one can never be replayed as the other.
+        let other = GateProfile(serviceAccount: "_svc2", accountRealName: "rn", namespace: "other-gate/v1",
+            keydir: "/var/k2", runDir: "/var/r2", sock: "/var/r2/g.sock", daemonLogErr: "/var/k2/e.err",
+            codeDir: "/opt/c2", policy: "/opt/c2/p.json", binaryName: "bin2", displayName: "d2",
+            launchdLabel: "lbl2", plist: "/L/lbl2.plist", daemonMatchPattern: "bin2 daemon",
+            claudeCodeDir: "/CC", managedSettings: "/CC/m.json")
+        let req: [String: Any] = ["tool": "Bash", "input": ["command": "ls"], "cwd": "/tmp"]
+        let a = try Broker(profile: testProfile, verifier: StubVerifier()).decideApprove(req, caller: 501).doc
+        let c = try Broker(profile: other, verifier: StubVerifier()).decideApprove(req, caller: 501).doc
+        XCTAssertNotEqual(a.ns, c.ns)
+        // compare with the per-op nonce held equal, so only ns can account for the difference
+        let aFixed = buildSignedDocument(op: a.op, path: a.path, contentSha256: a.contentSha256, cwd: a.cwd,
+                                         nonceHex: "fixed", callerUid: a.callerUid, contentMode: a.contentMode, ns: a.ns)
+        let cFixed = buildSignedDocument(op: c.op, path: c.path, contentSha256: c.contentSha256, cwd: c.cwd,
+                                         nonceHex: "fixed", callerUid: c.callerUid, contentMode: c.contentMode, ns: c.ns)
+        XCTAssertNotEqual(try canonicalBytes(aFixed), try canonicalBytes(cFixed),
+                          "identical requests under different namespaces must not share challenge bytes")
+    }
+
     // --- M1: a durable write must never be reported as a failure ---
     enum FakeAuditError: Error { case disk }
     func testWriteResultIsOkWhenAuditSucceeded() {
