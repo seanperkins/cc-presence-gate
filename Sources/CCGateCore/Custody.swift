@@ -46,11 +46,16 @@ public enum CustodyRegistry {
     public static func add(file: String?, dir: String?, path: String) throws {
         // Advisory flock(LOCK_EX) serializes concurrent enroll-* processes across the
         // read–modify–write so two racing adds cannot drop each other's entry (last-writer-wins).
-        // If open fails the flock is skipped (best-effort: the subsequent write will also fail and
-        // propagate the real error to the caller).
-        let fd = open(path, O_RDWR | O_CREAT, 0o600)
-        if fd >= 0 { flock(fd, LOCK_EX) }
-        defer { if fd >= 0 { flock(fd, LOCK_UN); close(fd) } }
+        //
+        // Lock a SIBLING `.lock` file, never `path` itself: the atomic write below replaces the
+        // registry's inode (write-to-temp + rename), so a lock held on the data file would be
+        // orphaned on a now-unlinked inode the moment anyone writes — subsequent callers would open
+        // the NEW inode and flock something entirely different, and the mutual exclusion would
+        // silently evaporate. Same pattern (and reasoning) as auditAppend. The sibling `.lock` under
+        // keydir is control-denied for execute-write by the keydir-prefix rule.
+        let lockFD = open(path + ".lock", O_CREAT | O_RDWR, 0o600)
+        if lockFD >= 0 { flock(lockFD, LOCK_EX) }
+        defer { if lockFD >= 0 { flock(lockFD, LOCK_UN); close(lockFD) } }
         var (files, dirs) = load(path: path)
         // Normalize via Broker.normPath (the SAME normalization the broker uses at comparison time) so
         // /private/var/foo and /var/foo dedup to one entry — idempotency contract (Task-4 review). NOT

@@ -60,18 +60,27 @@ final class CustodyTests: XCTestCase {
     }
     func testRegistryConcurrentAddsPreservesAllEntries() throws {
         // Verifies the flock-serialized RMW: concurrent adds must not race and drop entries.
-        let path = NSTemporaryDirectory() + "custody-concurrent-\(UUID().uuidString).json"
-        let count = 20
-        let group = DispatchGroup()
-        for i in 0..<count {
-            group.enter()
-            DispatchQueue.global().async {
-                try? CustodyRegistry.add(file: "/tmp/concurrent-file-\(i)", dir: nil, path: path)
-                group.leave()
+        //
+        // Runs several rounds at high width on purpose. The lost-update window only opens once the
+        // atomic write has swapped the registry's inode, so a lock taken on the data file instead of
+        // the sibling .lock survives a low-contention run by luck — an earlier 20-wide single-round
+        // version of this test passed twice against exactly that bug before catching it.
+        for round in 0..<5 {
+            let path = NSTemporaryDirectory() + "custody-concurrent-\(UUID().uuidString).json"
+            let count = 40
+            let group = DispatchGroup()
+            for i in 0..<count {
+                group.enter()
+                DispatchQueue.global().async {
+                    try? CustodyRegistry.add(file: "/tmp/concurrent-file-\(i)", dir: nil, path: path)
+                    group.leave()
+                }
             }
+            group.wait()
+            let (files, _) = CustodyRegistry.load(path: path)
+            XCTAssertEqual(files.count, count,
+                           "round \(round): expected \(count) entries, got \(files.count) — lost update")
+            XCTAssertEqual(Set(files).count, files.count, "round \(round): duplicate entries")
         }
-        group.wait()
-        let (files, _) = CustodyRegistry.load(path: path)
-        XCTAssertEqual(files.count, count, "expected \(count) entries but got \(files.count): \(files)")
     }
 }
